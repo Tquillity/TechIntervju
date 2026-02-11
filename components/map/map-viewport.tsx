@@ -16,7 +16,7 @@ const STADIA_VECTOR_STYLE =
   "https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json";
 // Sentinel-2 cloudless (EOX); limit zoom to reduce 404s
 const SENTINEL_RASTER_TILES =
-  "https://tiles.maps.eox.at/styles/s2cloudless-2020/{z}/{x}/{y}.jpg";
+  "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg";
 const SENTINEL_MAX_ZOOM = 13;
 // Esri World Imagery – high-resolution base layer
 const ESRI_IMAGERY_TILES =
@@ -25,15 +25,22 @@ const ESRI_IMAGERY_TILES =
 const TERRAIN_SOURCE_URL =
   "https://demotiles.maplibre.org/terrain-tiles/tiles.json";
 // OpenFreeMap vector tiles for 3D buildings (planet = TileJSON endpoint)
-const OPENFREEMAP_VECTOR = "https://tiles.openfreemap.org/planet";
+const OPENFREEMAP_VECTOR = "https://tiles.openfreemap.org/v1/openfreemap";
 
 const SENTINEL_LAYER_ID = "sentinel-layer";
 const ESRI_LAYER_ID = "esri-layer";
 const TERRAIN_SOURCE_ID = "terrain-source";
 const BUILDINGS_3D_LAYER_ID = "3d-buildings";
+const NASA_CO2_SOURCE_ID = "nasa-co2";
+const NASA_CO2_LAYER_ID = "co2-layer";
 
 const GEODATA_LAYER_ID = "geodata-layer";
 const GEODATA_SOURCE_ID = "geodata";
+
+/** NASA GIBS AIRS L3 CO2 daily surface concentration; {TIME} = YYYY-MM-DD */
+function getNasaCo2TileUrl(time: string): string {
+  return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/AIRS_L3_Carbon_Dioxide_IR_Daily_Surface_Concentration/default/${time}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`;
+}
 
 export type BaseLayerId = "vector" | "satellite" | "high-res";
 
@@ -44,6 +51,10 @@ export interface MapViewportProps {
   baseLayer: BaseLayerId;
   /** When true, show OpenFreeMap 3D buildings (fill-extrusion) */
   buildings3dVisible?: boolean;
+  /** Selected date for NASA CO2 layer (YYYY-MM-DD) */
+  selectedDate?: string;
+  /** When true, show NASA CO2 atmosphere overlay */
+  co2Enabled?: boolean;
   /** Loaded GeoJSON to display on the map */
   geodata?: GeoJSONFeatureCollection | null;
   /** Callback when map is ready */
@@ -58,6 +69,8 @@ export function MapViewport({
   flyToBbox,
   baseLayer,
   buildings3dVisible = false,
+  selectedDate,
+  co2Enabled = false,
   geodata,
   onMapReady,
   onFeatureClick,
@@ -190,6 +203,23 @@ export function MapViewport({
         );
       }
 
+      // NASA CO2 source (layer added after 3D buildings so it sits above base rasters, below 3D buildings)
+      const initialCo2Time =
+        selectedDate ??
+        (() => {
+          const d = new Date();
+          d.setDate(d.getDate() - 1);
+          return d.toISOString().slice(0, 10);
+        })();
+      if (!mapInstance.getSource(NASA_CO2_SOURCE_ID)) {
+        mapInstance.addSource(NASA_CO2_SOURCE_ID, {
+          type: "raster",
+          tiles: [getNasaCo2TileUrl(initialCo2Time)],
+          tileSize: 256,
+          attribution: "NASA GIBS / AIRS L3 CO₂",
+        });
+      }
+
       // 3D buildings (OpenFreeMap) – visibility toggled by sidebar
       if (!mapInstance.getSource("openfreemap")) {
         mapInstance.addSource("openfreemap", {
@@ -238,6 +268,21 @@ export function MapViewport({
             },
           },
           labelLayerId
+        );
+      }
+
+      // CO2 layer above base rasters, below 3D buildings and labels (hidden until overlay enabled)
+      if (!mapInstance.getLayer(NASA_CO2_LAYER_ID)) {
+        mapInstance.addLayer(
+          {
+            id: NASA_CO2_LAYER_ID,
+            type: "raster",
+            source: NASA_CO2_SOURCE_ID,
+            minzoom: 0,
+            layout: { visibility: "none" },
+            paint: { "raster-opacity": 0.7 },
+          },
+          BUILDINGS_3D_LAYER_ID
         );
       }
 
@@ -295,6 +340,30 @@ export function MapViewport({
       buildings3dVisible ? "visible" : "none"
     );
   }, [loaded, buildings3dVisible]);
+
+  // NASA CO2: update tile URL when selectedDate changes (avoids full layer reload/flicker)
+  useEffect(() => {
+    if (!loaded || !selectedDate || !mapInstanceRef.current) return;
+    const m = mapInstanceRef.current;
+    const source = m.getSource(NASA_CO2_SOURCE_ID) as
+      | (maplibregl.RasterTileSource & { setTiles?: (tiles: string[]) => void })
+      | undefined;
+    if (source?.setTiles) {
+      source.setTiles([getNasaCo2TileUrl(selectedDate)]);
+    }
+  }, [loaded, selectedDate]);
+
+  // NASA CO2 overlay visibility
+  useEffect(() => {
+    if (!loaded || !mapInstanceRef.current) return;
+    const m = mapInstanceRef.current;
+    if (!m.getLayer(NASA_CO2_LAYER_ID)) return;
+    m.setLayoutProperty(
+      NASA_CO2_LAYER_ID,
+      "visibility",
+      co2Enabled ? "visible" : "none"
+    );
+  }, [loaded, co2Enabled]);
 
   // Cinematic fly-to when bbox is set (e.g. after data load)
   useEffect(() => {

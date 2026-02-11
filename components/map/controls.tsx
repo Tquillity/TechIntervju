@@ -12,6 +12,7 @@ import {
   X,
   Building2,
   ImageIcon,
+  Cloud,
 } from "lucide-react";
 import type { BaseLayerId } from "./map-viewport";
 import type { PresetId } from "@/hooks/use-geodata";
@@ -21,6 +22,8 @@ export interface MapControlsProps {
   onBaseLayerChange: (id: BaseLayerId) => void;
   buildings3dVisible: boolean;
   onBuildings3dChange: (visible: boolean) => void;
+  co2Enabled: boolean;
+  onCo2EnabledChange: (enabled: boolean) => void;
   onPresetFetch: (preset: PresetId) => void;
   onClearData: () => void;
   loading: boolean;
@@ -35,6 +38,8 @@ export function MapControls({
   onBaseLayerChange,
   buildings3dVisible,
   onBuildings3dChange,
+  co2Enabled,
+  onCo2EnabledChange,
   onPresetFetch,
   onClearData,
   loading,
@@ -107,6 +112,21 @@ export function MapControls({
           />
           <Building2 className="size-4 text-muted" />
           <span className="text-sm">3D Buildings</span>
+        </label>
+      </div>
+
+      {/* CO2 Atmosphere Overlay */}
+      <div className="space-y-2">
+        <span className="text-sm text-muted">Overlays</span>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={co2Enabled}
+            onChange={(e) => onCo2EnabledChange(e.target.checked)}
+            className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
+          />
+          <Cloud className="size-4 text-muted" />
+          <span className="text-sm">CO₂ Atmosphere Overlay</span>
         </label>
       </div>
 
