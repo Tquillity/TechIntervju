@@ -32,9 +32,9 @@ const OPENAQ_SOURCE_ID = "openaq";
 const OPENAQ_GLOW_LAYER_ID = "openaq-glow";
 const OPENAQ_LAYER_ID = "openaq-layer";
 
-// --- REPLACE THE FUNCTION NEAR LINE 33 WITH THIS ---
+/** NASA GIBS WMTS: AIRS CO2 Total Column (Day) – production layer ID. */
 function getNasaCo2TileUrl(time: string): string {
-  return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/AIRS_L3_Carbon_Dioxide_IR_Daily_Surface_Concentration/default/${time}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`;
+  return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/AIRS_CO2_Total_Column_Day/default/${time}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`;
 }
 
 export type BaseLayerId = "vector" | "satellite" | "high-res";
@@ -209,7 +209,7 @@ export function MapViewport({
         selectedDate ??
         (() => {
           const d = new Date();
-          d.setDate(d.getDate() - 4);
+          d.setDate(d.getDate() - 8);
           return d.toISOString().slice(0, 10);
         })();
       if (!mapInstance.getSource(NASA_CO2_SOURCE_ID)) {
@@ -217,7 +217,8 @@ export function MapViewport({
           type: "raster",
           tiles: [getNasaCo2TileUrl(initialCo2Time)],
           tileSize: 256,
-          attribution: "NASA GIBS / AIRS L3 CO₂",
+          maxzoom: 6,
+          attribution: "NASA GIBS / AIRS CO₂",
         });
       }
 

@@ -143,6 +143,31 @@ export function padBBox(bbox: BBox, padding = 1.2): BBox {
   ];
 }
 
+/** Sample tile URL for NASA GIBS AIRS CO2 availability probe (HEAD request). Layer: AIRS_CO2_Total_Column_Day. */
+const NASA_GIBS_CO2_PROBE_URL = (date: string) =>
+  `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/AIRS_CO2_Total_Column_Day/default/${date}/GoogleMapsCompatible_Level6/0/0/0.png`;
+
+/**
+ * Find the latest date for which NASA GIBS AIRS CO2 tiles are available.
+ * Tries from today backwards (max 10 attempts). Uses HEAD to avoid downloading tiles.
+ * @returns YYYY-MM-DD of first date with response.ok, or null if none found.
+ */
+export async function findLatestNasaDate(): Promise<string | null> {
+  const maxAttempts = 10;
+  for (let i = 0; i < maxAttempts; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const date = d.toISOString().slice(0, 10);
+    try {
+      const res = await fetch(NASA_GIBS_CO2_PROBE_URL(date), { method: "HEAD" });
+      if (res.ok) return date;
+    } catch {
+      // network/CORS: skip this date
+    }
+  }
+  return null;
+}
+
 export type PresetId = "earthquakes" | "city-trees" | "satellite-anomalies";
 
 const PRESET_URLS: Record<PresetId, string> = {
