@@ -1,0 +1,74 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.bun/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/install-state.gz
+.pnp.*
+.yarn-integrity
+
+# Next.js
+.next/
+out/
+build/
+.vercel/
+*.tsbuildinfo
+
+# Turbopack / build cache
+.turbo/
+.next/cache/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+.secret
+
+# Debug and logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+logs/
+
+# OS and IDE
+.DS_Store
+.DS_Store?
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Testing and coverage
+coverage/
+.nyc_output/
+*.lcov
+.jest/
+
+# Misc
+.cache/
+*.local
+.parcel-cache/
+.astro/
+.remix/
+.nx/cache/
+dist/
+tmp/
+temp/
+
+# Optional: uncomment to ignore local Cursor project state
+# .cursor/

@@ -1,0 +1,55 @@
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+@theme {
+  /* 2026 palette – deep space + accent */
+  --color-surface: oklch(0.12 0.02 260);
+  --color-surface-elevated: oklch(0.18 0.025 260);
+  --color-border: oklch(0.28 0.03 260);
+  --color-muted: oklch(0.55 0.04 260);
+  --color-accent: oklch(0.72 0.18 250);
+  --color-accent-muted: oklch(0.55 0.14 250);
+  --color-success: oklch(0.72 0.18 145);
+  --color-warning: oklch(0.82 0.16 75);
+  --color-danger: oklch(0.65 0.22 25);
+  /* Glass */
+  --color-glass-bg: oklch(0.18 0.02 260 / 0.75);
+  --color-glass-border: oklch(0.35 0.04 260 / 0.5);
+  /* Shadows */
+  --shadow-glass: 0 8px 32px oklch(0 0 0 / 0.35);
+  --shadow-panel: 0 4px 24px oklch(0 0 0 / 0.25);
+  /* Radius */
+  --radius-panel: 12px;
+  --radius-button: 8px;
+  /* Container queries support */
+  --container-type: inline-size;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    @apply bg-surface text-white antialiased;
+  }
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: var(--color-glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--shadow-glass);
+  border-radius: var(--radius-panel);
+}
+
+/* MapLibre overrides – ensure canvas fills container */
+.maplibregl-canvas-container {
+  position: absolute;
+  inset: 0;
+}
+.maplibregl-map {
+  position: absolute;
+  inset: 0;
+}
