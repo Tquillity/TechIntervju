@@ -10,6 +10,8 @@ import {
   Link,
   Loader2,
   X,
+  Building2,
+  ImageIcon,
 } from "lucide-react";
 import type { BaseLayerId } from "./map-viewport";
 import type { PresetId } from "@/hooks/use-geodata";
@@ -17,6 +19,8 @@ import type { PresetId } from "@/hooks/use-geodata";
 export interface MapControlsProps {
   baseLayer: BaseLayerId;
   onBaseLayerChange: (id: BaseLayerId) => void;
+  buildings3dVisible: boolean;
+  onBuildings3dChange: (visible: boolean) => void;
   onPresetFetch: (preset: PresetId) => void;
   onClearData: () => void;
   loading: boolean;
@@ -29,6 +33,8 @@ export interface MapControlsProps {
 export function MapControls({
   baseLayer,
   onBaseLayerChange,
+  buildings3dVisible,
+  onBuildings3dChange,
   onPresetFetch,
   onClearData,
   loading,
@@ -44,35 +50,64 @@ export function MapControls({
         <span>Magic Import</span>
       </div>
 
-      {/* Base layer switcher */}
+      {/* Base layer switcher: Vector | Sentinel-2 | High-Res Esri */}
       <div className="space-y-2">
         <span className="text-sm text-muted">Base layer</span>
-        <div className="flex rounded-lg overflow-hidden border border-border">
-          <button
-            type="button"
-            onClick={() => onBaseLayerChange("vector")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm transition-colors ${
-              baseLayer === "vector"
-                ? "bg-accent text-white"
-                : "bg-surface-elevated text-muted hover:bg-border/50"
-            }`}
-          >
-            <MapIcon className="size-4" />
-            Vector
-          </button>
-          <button
-            type="button"
-            onClick={() => onBaseLayerChange("satellite")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm transition-colors ${
-              baseLayer === "satellite"
-                ? "bg-accent text-white"
-                : "bg-surface-elevated text-muted hover:bg-border/50"
-            }`}
-          >
-            <Satellite className="size-4" />
-            Sentinel-2
-          </button>
+        <div className="flex flex-col gap-1 rounded-lg overflow-hidden border border-border">
+          <div className="flex">
+            <button
+              type="button"
+              onClick={() => onBaseLayerChange("vector")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm transition-colors ${
+                baseLayer === "vector"
+                  ? "bg-accent text-white"
+                  : "bg-surface-elevated text-muted hover:bg-border/50"
+              }`}
+            >
+              <MapIcon className="size-4" />
+              Vector
+            </button>
+            <button
+              type="button"
+              onClick={() => onBaseLayerChange("satellite")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm transition-colors ${
+                baseLayer === "satellite"
+                  ? "bg-accent text-white"
+                  : "bg-surface-elevated text-muted hover:bg-border/50"
+              }`}
+            >
+              <Satellite className="size-4" />
+              Sentinel-2
+            </button>
+            <button
+              type="button"
+              onClick={() => onBaseLayerChange("high-res")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm transition-colors ${
+                baseLayer === "high-res"
+                  ? "bg-accent text-white"
+                  : "bg-surface-elevated text-muted hover:bg-border/50"
+              }`}
+            >
+              <ImageIcon className="size-4" />
+              High-Res
+            </button>
+          </div>
         </div>
+      </div>
+
+      {/* 3D Building toggle */}
+      <div className="space-y-2">
+        <span className="text-sm text-muted">3D</span>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={buildings3dVisible}
+            onChange={(e) => onBuildings3dChange(e.target.checked)}
+            className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
+          />
+          <Building2 className="size-4 text-muted" />
+          <span className="text-sm">3D Buildings</span>
+        </label>
       </div>
 
       {/* Presets */}

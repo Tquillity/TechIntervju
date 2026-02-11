@@ -11,6 +11,7 @@ import { padBBox } from "@/hooks/use-geodata";
 export function MapDashboard() {
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [baseLayer, setBaseLayer] = useState<BaseLayerId>("vector");
+  const [buildings3dVisible, setBuildings3dVisible] = useState(false);
   const [customUrl, setCustomUrl] = useState("");
   const [inspectedFeature, setInspectedFeature] =
     useState<GeoJSON.Feature | null>(null);
@@ -37,6 +38,7 @@ export function MapDashboard() {
         mapRef={mapRef}
         flyToBbox={flyToBbox}
         baseLayer={baseLayer}
+        buildings3dVisible={buildings3dVisible}
         geodata={geodata ?? null}
         onFeatureClick={setInspectedFeature}
       />
@@ -57,6 +59,8 @@ export function MapDashboard() {
         <MapControls
           baseLayer={baseLayer}
           onBaseLayerChange={setBaseLayer}
+          buildings3dVisible={buildings3dVisible}
+          onBuildings3dChange={setBuildings3dVisible}
           onPresetFetch={fetchPreset}
           onClearData={clear}
           loading={loading}

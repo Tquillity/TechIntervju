@@ -14,25 +14,36 @@ import type { GeoJSONFeatureCollection } from "@/hooks/use-geodata";
 // Alidade Smooth Dark – high-contrast dark vector theme for data overlays
 const STADIA_VECTOR_STYLE =
   "https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json";
-// Satellite base layer: ESRI World Imagery (reliable, no CORS/404). EOX Sentinel-2 often blocks or 404s at high zoom.
+// Sentinel-2 cloudless (EOX); limit zoom to reduce 404s
 const SENTINEL_RASTER_TILES =
+  "https://tiles.maps.eox.at/styles/s2cloudless-2020/{z}/{x}/{y}.jpg";
+const SENTINEL_MAX_ZOOM = 13;
+// Esri World Imagery – high-resolution base layer
+const ESRI_IMAGERY_TILES =
   "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
-// Global 3D terrain (MapLibre demo)
+// RGB terrain (MapLibre demo) for true 3D terrain
 const TERRAIN_SOURCE_URL =
   "https://demotiles.maplibre.org/terrain-tiles/tiles.json";
 // OpenFreeMap vector tiles for 3D buildings (planet = TileJSON endpoint)
 const OPENFREEMAP_VECTOR = "https://tiles.openfreemap.org/planet";
 
+const SENTINEL_LAYER_ID = "sentinel-layer";
+const ESRI_LAYER_ID = "esri-layer";
+const TERRAIN_SOURCE_ID = "terrain-source";
+const BUILDINGS_3D_LAYER_ID = "3d-buildings";
+
 const GEODATA_LAYER_ID = "geodata-layer";
 const GEODATA_SOURCE_ID = "geodata";
 
-export type BaseLayerId = "vector" | "satellite";
+export type BaseLayerId = "vector" | "satellite" | "high-res";
 
 export interface MapViewportProps {
   /** When set, triggers a cinematic fly-to this bbox (after data load) */
   flyToBbox: BBox | null;
-  /** Current base layer for cross-fade */
+  /** Current base layer for cross-fade (vector, Sentinel-2, or Esri high-res) */
   baseLayer: BaseLayerId;
+  /** When true, show OpenFreeMap 3D buildings (fill-extrusion) */
+  buildings3dVisible?: boolean;
   /** Loaded GeoJSON to display on the map */
   geodata?: GeoJSONFeatureCollection | null;
   /** Callback when map is ready */
@@ -46,6 +57,7 @@ export interface MapViewportProps {
 export function MapViewport({
   flyToBbox,
   baseLayer,
+  buildings3dVisible = false,
   geodata,
   onMapReady,
   onFeatureClick,
@@ -55,6 +67,7 @@ export function MapViewport({
   const mapInstanceRef = useRef<maplibregl.Map | null>(null);
   const [loaded, setLoaded] = useState(false);
   const sentinelOpacityRef = useRef(0);
+  const esriOpacityRef = useRef(0);
   const rafRef = useRef<number>(0);
 
   const map = externalMapRef?.current ?? mapInstanceRef.current;
@@ -116,20 +129,20 @@ export function MapViewport({
       const style = mapInstance.getStyle();
       if (!style) return;
 
-      // Terrain (raster-dem + setTerrain)
-      if (!mapInstance.getSource("maplibre-terrain")) {
-        mapInstance.addSource("maplibre-terrain", {
+      // True 3D terrain (RGB terrain tiles)
+      if (!mapInstance.getSource(TERRAIN_SOURCE_ID)) {
+        mapInstance.addSource(TERRAIN_SOURCE_ID, {
           type: "raster-dem",
           url: TERRAIN_SOURCE_URL,
           tileSize: 256,
         });
         mapInstance.setTerrain({
-          source: "maplibre-terrain",
-          exaggeration: 1.2,
+          source: TERRAIN_SOURCE_ID,
+          exaggeration: 1.5,
         });
       }
 
-      // Sentinel-2 raster layer (for base layer switch) – insert below labels
+      // Raster base layers (insert below labels): Sentinel-2 + Esri World Imagery
       const layers = mapInstance.getStyle().layers ?? [];
       let beforeId: string | undefined;
       for (let i = 0; i < layers.length; i++) {
@@ -143,21 +156,41 @@ export function MapViewport({
           type: "raster",
           tiles: [SENTINEL_RASTER_TILES],
           tileSize: 256,
+          maxzoom: SENTINEL_MAX_ZOOM,
           attribution:
-            "Esri, Maxar, Earthstar Geographics",
+            "Sentinel-2 cloudless © <a href='https://s2maps.eu' target='_blank'>EOX / s2maps.eu</a>",
         });
         mapInstance.addLayer(
           {
-            id: "sentinel-layer",
+            id: SENTINEL_LAYER_ID,
             type: "raster",
             source: "sentinel-raster",
+            minzoom: 0,
+            maxzoom: SENTINEL_MAX_ZOOM,
+            paint: { "raster-opacity": 0 },
+          },
+          beforeId
+        );
+      }
+      if (!mapInstance.getSource("esri-raster")) {
+        mapInstance.addSource("esri-raster", {
+          type: "raster",
+          tiles: [ESRI_IMAGERY_TILES],
+          tileSize: 256,
+          attribution: "Esri, Maxar, Earthstar Geographics",
+        });
+        mapInstance.addLayer(
+          {
+            id: ESRI_LAYER_ID,
+            type: "raster",
+            source: "esri-raster",
             paint: { "raster-opacity": 0 },
           },
           beforeId
         );
       }
 
-      // 3D buildings (OpenFreeMap building layer)
+      // 3D buildings (OpenFreeMap) – visibility toggled by sidebar
       if (!mapInstance.getSource("openfreemap")) {
         mapInstance.addSource("openfreemap", {
           type: "vector",
@@ -168,7 +201,7 @@ export function MapViewport({
         )?.id;
         mapInstance.addLayer(
           {
-            id: "3d-buildings",
+            id: BUILDINGS_3D_LAYER_ID,
             source: "openfreemap",
             "source-layer": "building",
             type: "fill-extrusion",
@@ -220,15 +253,16 @@ export function MapViewport({
     };
   }, [onMapReady]);
 
-  // Cross-fade base layer (raster opacity) using requestAnimationFrame for smoothness
+  // Cross-fade base layer (Sentinel-2, Vector, Esri high-res) via RAF
   useEffect(() => {
     if (!loaded || !mapInstanceRef.current) return;
     const m = mapInstanceRef.current;
-    const layer = m.getLayer("sentinel-layer");
-    if (!layer) return;
+    if (!m.getLayer(SENTINEL_LAYER_ID) || !m.getLayer(ESRI_LAYER_ID)) return;
 
-    const targetOpacity = baseLayer === "satellite" ? 1 : 0;
-    const startOpacity = sentinelOpacityRef.current;
+    const targetSentinel = baseLayer === "satellite" ? 1 : 0;
+    const targetEsri = baseLayer === "high-res" ? 1 : 0;
+    const startSentinel = sentinelOpacityRef.current;
+    const startEsri = esriOpacityRef.current;
     const startTime = performance.now();
     const duration = 600;
 
@@ -236,9 +270,12 @@ export function MapViewport({
       const elapsed = now - startTime;
       const t = Math.min(elapsed / duration, 1);
       const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-      const opacity = startOpacity + (targetOpacity - startOpacity) * eased;
-      sentinelOpacityRef.current = opacity;
-      m.setPaintProperty("sentinel-layer", "raster-opacity", opacity);
+      const sentinelOpacity = startSentinel + (targetSentinel - startSentinel) * eased;
+      const esriOpacity = startEsri + (targetEsri - startEsri) * eased;
+      sentinelOpacityRef.current = sentinelOpacity;
+      esriOpacityRef.current = esriOpacity;
+      m.setPaintProperty(SENTINEL_LAYER_ID, "raster-opacity", sentinelOpacity);
+      m.setPaintProperty(ESRI_LAYER_ID, "raster-opacity", esriOpacity);
       if (t < 1) rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -246,6 +283,18 @@ export function MapViewport({
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [baseLayer, loaded]);
+
+  // 3D buildings visibility toggle
+  useEffect(() => {
+    if (!loaded || !mapInstanceRef.current) return;
+    const m = mapInstanceRef.current;
+    if (!m.getLayer(BUILDINGS_3D_LAYER_ID)) return;
+    m.setLayoutProperty(
+      BUILDINGS_3D_LAYER_ID,
+      "visibility",
+      buildings3dVisible ? "visible" : "none"
+    );
+  }, [loaded, buildings3dVisible]);
 
   // Cinematic fly-to when bbox is set (e.g. after data load)
   useEffect(() => {
