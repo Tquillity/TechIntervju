@@ -10,9 +10,10 @@ import { useGeoData } from "@/hooks/use-geodata";
 import { useOpenAQ } from "@/hooks/use-openaq";
 import { padBBox } from "@/hooks/use-geodata";
 
-function getYesterdayYYYYMMDD(): string {
+/** NASA GIBS AIRS CO2 has ~3–4 day processing lag; use 4 days prior so tiles exist. */
+function getCo2DefaultDateYYYYMMDD(): string {
   const d = new Date();
-  d.setDate(d.getDate() - 1);
+  d.setDate(d.getDate() - 4);
   return d.toISOString().slice(0, 10);
 }
 
@@ -20,7 +21,7 @@ export function MapDashboard() {
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [baseLayer, setBaseLayer] = useState<BaseLayerId>("vector");
   const [buildings3dVisible, setBuildings3dVisible] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(() => getYesterdayYYYYMMDD());
+  const [selectedDate, setSelectedDate] = useState(() => getCo2DefaultDateYYYYMMDD());
   const [co2Enabled, setCo2Enabled] = useState(false);
   const [openaqEnabled, setOpenaqEnabled] = useState(false);
   const [presentationMode, setPresentationMode] = useState(false);

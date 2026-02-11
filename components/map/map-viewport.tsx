@@ -17,7 +17,6 @@ const SENTINEL_RASTER_TILES = "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-
 const SENTINEL_MAX_ZOOM = 13;
 const ESRI_IMAGERY_TILES = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 const TERRAIN_SOURCE_URL = "https://demotiles.maplibre.org/terrain-tiles/tiles.json";
-const OPENFREEMAP_VECTOR = "https://tiles.openfreemap.org/v1/openfreemap.json";
 
 const SENTINEL_LAYER_ID = "sentinel-layer";
 const ESRI_LAYER_ID = "esri-layer";
@@ -210,7 +209,7 @@ export function MapViewport({
         selectedDate ??
         (() => {
           const d = new Date();
-          d.setDate(d.getDate() - 1);
+          d.setDate(d.getDate() - 4);
           return d.toISOString().slice(0, 10);
         })();
       if (!mapInstance.getSource(NASA_CO2_SOURCE_ID)) {
@@ -222,28 +221,24 @@ export function MapViewport({
         });
       }
 
-      // 3D buildings (OpenFreeMap) – visibility toggled by sidebar
-      if (!mapInstance.getSource("openfreemap")) {
-        mapInstance.addSource("openfreemap", {
-          type: "vector",
-          url: OPENFREEMAP_VECTOR,
-        });
+      // 3D buildings: reuse Stadia style's openmaptiles source (no CORS/second source); OSM height/min_height
+      if (mapInstance.getSource("openmaptiles") && !mapInstance.getLayer(BUILDINGS_3D_LAYER_ID)) {
         const labelLayerId = layers.find(
           (l) => l.type === "symbol" && (l as { layout?: { "text-field"?: unknown } }).layout?.["text-field"]
         )?.id;
         mapInstance.addLayer(
           {
             id: BUILDINGS_3D_LAYER_ID,
-            source: "openfreemap",
+            source: "openmaptiles",
             "source-layer": "building",
             type: "fill-extrusion",
             minzoom: 14,
-            filter: ["!=", ["get", "hide_3d"], true],
+            layout: { visibility: "none" },
             paint: {
               "fill-extrusion-color": [
                 "interpolate",
                 ["linear"],
-                ["get", "render_height"],
+                ["coalesce", ["get", "height"], 0],
                 0,
                 "rgb(180,180,200)",
                 200,
@@ -258,14 +253,14 @@ export function MapViewport({
                 14,
                 0,
                 16,
-                ["get", "render_height"],
+                ["coalesce", ["get", "height"], 0],
               ],
               "fill-extrusion-base": [
                 "step",
                 ["zoom"],
                 0,
                 16,
-                ["get", "render_min_height"],
+                ["coalesce", ["get", "min_height"], 0],
               ],
             },
           },
@@ -274,6 +269,7 @@ export function MapViewport({
       }
 
       // CO2 layer above base rasters, below 3D buildings and labels (hidden until overlay enabled)
+      // NASA GIBS Level6 tile matrix only supports zoom 0–6; maxzoom prevents 400 on over-zoom
       if (!mapInstance.getLayer(NASA_CO2_LAYER_ID)) {
         mapInstance.addLayer(
           {
@@ -281,6 +277,7 @@ export function MapViewport({
             type: "raster",
             source: NASA_CO2_SOURCE_ID,
             minzoom: 0,
+            maxzoom: 6,
             layout: { visibility: "none" },
             paint: { "raster-opacity": 0.7 },
           },
