@@ -53,3 +53,11 @@
   position: absolute;
   inset: 0;
 }
+
+/* Only the north arrow red; other compass part and zoom buttons stay gray */
+.maplibregl-ctrl-group button.maplibregl-ctrl-compass .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' viewBox='0 0 29 29'%3E%3Cpath fill='%23e53935' d='m10.5 14 4-8 4 8z'/%3E%3Cpath fill='%23666' d='m10.5 16 4 8 4-8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}

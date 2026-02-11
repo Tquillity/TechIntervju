@@ -1,12 +1,13 @@
 "use client";
 
 import type maplibregl from "maplibre-gl";
-import { useRef, useState, useCallback } from "react";
-import { MapViewport, type BaseLayerId } from "./map-viewport";
+import { useRef, useState, useCallback, useEffect } from "react";
+import { MapViewport, startCinematicTour, type BaseLayerId } from "./map-viewport";
 import { MapControls } from "./controls";
 import { DataInspector } from "./data-inspector";
 import { TimelineSlider } from "./timeline-slider";
 import { useGeoData } from "@/hooks/use-geodata";
+import { useOpenAQ } from "@/hooks/use-openaq";
 import { padBBox } from "@/hooks/use-geodata";
 
 function getYesterdayYYYYMMDD(): string {
@@ -21,6 +22,8 @@ export function MapDashboard() {
   const [buildings3dVisible, setBuildings3dVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => getYesterdayYYYYMMDD());
   const [co2Enabled, setCo2Enabled] = useState(false);
+  const [openaqEnabled, setOpenaqEnabled] = useState(false);
+  const [presentationMode, setPresentationMode] = useState(false);
   const [customUrl, setCustomUrl] = useState("");
   const [inspectedFeature, setInspectedFeature] =
     useState<GeoJSON.Feature | null>(null);
@@ -35,11 +38,23 @@ export function MapDashboard() {
     clear,
   } = useGeoData();
 
+  const { data: openaqData, loading: openaqLoading, refresh: refreshOpenAQ } = useOpenAQ();
+
+  useEffect(() => {
+    if (openaqEnabled && !openaqData) refreshOpenAQ();
+  }, [openaqEnabled, openaqData, refreshOpenAQ]);
+
   const flyToBbox = bbox ? padBBox(bbox, 1.25) : null;
 
   const handleFetchCustomUrl = useCallback(() => {
     if (customUrl.trim()) fetchByUrl(customUrl.trim());
   }, [customUrl, fetchByUrl]);
+
+  const handleStartCinematicTour = useCallback(() => {
+    startCinematicTour(mapRef.current);
+  }, []);
+
+  const presentationHide = presentationMode ? "opacity-0 pointer-events-none transition-opacity duration-300" : "transition-opacity duration-300";
 
   return (
     <div className="relative w-full h-full @container">
@@ -51,13 +66,15 @@ export function MapDashboard() {
         selectedDate={selectedDate}
         co2Enabled={co2Enabled}
         geodata={geodata ?? null}
+        openaqData={openaqData ?? null}
+        openaqEnabled={openaqEnabled}
         onFeatureClick={setInspectedFeature}
       />
 
-      {/* Mock data banner */}
+      {/* Mock data banner – hidden in presentation mode */}
       {isMocked && (
         <div
-          className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-lg bg-warning/90 text-black font-semibold text-sm shadow-lg border border-warning"
+          className={`absolute top-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-lg bg-warning/90 text-black font-semibold text-sm shadow-lg border border-warning ${presentationHide}`}
           role="status"
           aria-live="polite"
         >
@@ -65,8 +82,8 @@ export function MapDashboard() {
         </div>
       )}
 
-      {/* Magic Import sidebar */}
-      <div className="absolute top-4 left-4 z-10">
+      {/* Magic Import sidebar – hidden in presentation mode */}
+      <div className={`absolute top-4 left-4 z-10 ${presentationHide}`}>
         <MapControls
           baseLayer={baseLayer}
           onBaseLayerChange={setBaseLayer}
@@ -74,6 +91,13 @@ export function MapDashboard() {
           onBuildings3dChange={setBuildings3dVisible}
           co2Enabled={co2Enabled}
           onCo2EnabledChange={setCo2Enabled}
+          openaqEnabled={openaqEnabled}
+          onOpenaqEnabledChange={setOpenaqEnabled}
+          openaqLoading={openaqLoading}
+          onRefreshOpenaq={refreshOpenAQ}
+          onStartCinematicTour={handleStartCinematicTour}
+          presentationMode={presentationMode}
+          onPresentationModeChange={setPresentationMode}
           onPresetFetch={fetchPreset}
           onClearData={clear}
           loading={loading}
@@ -84,13 +108,13 @@ export function MapDashboard() {
         />
       </div>
 
-      {/* Temporal CO2 timeline – centered at bottom to avoid overlapping sidebar */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 w-full max-w-md px-4">
+      {/* Temporal CO2 timeline – hidden in presentation mode */}
+      <div className={`absolute bottom-8 left-1/2 -translate-x-1/2 z-10 w-full max-w-md px-4 ${presentationHide}`}>
         <TimelineSlider value={selectedDate} onChange={setSelectedDate} />
       </div>
 
-      {/* Data Inspector – offset from right so it doesn’t overlap MapLibre nav controls */}
-      <div className="absolute top-4 right-16 z-10 max-w-[calc(100vw-8rem)]">
+      {/* Data Inspector – hidden in presentation mode */}
+      <div className={`absolute top-4 right-16 z-10 max-w-[calc(100vw-8rem)] ${presentationHide}`}>
         <DataInspector
           feature={inspectedFeature}
           onClose={() => setInspectedFeature(null)}

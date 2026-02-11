@@ -146,12 +146,9 @@ export function padBBox(bbox: BBox, padding = 1.2): BBox {
 export type PresetId = "earthquakes" | "city-trees" | "satellite-anomalies";
 
 const PRESET_URLS: Record<PresetId, string> = {
-  earthquakes:
-    "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
-  "city-trees":
-    "https://opendata.arcgis.com/datasets/fe9e8f2e2b2b4e2b8e2b2b2b2b2b2b2b.geojson", // placeholder – will mock if CORS
-  "satellite-anomalies":
-    "https://api.example.com/anomalies.geojson", // placeholder – will mock
+  earthquakes: "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+  "city-trees": "https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/les-arbres/exports/geojson",
+  "satellite-anomalies": "https://raw.githubusercontent.com/datasets/geo-boundaries-world-110m/master/countries.geojson"
 };
 
 /** Generate mock GeoJSON so demo works when CORS blocks real URLs */

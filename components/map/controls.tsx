@@ -13,6 +13,9 @@ import {
   Building2,
   ImageIcon,
   Cloud,
+  Play,
+  Wind,
+  Maximize2,
 } from "lucide-react";
 import type { BaseLayerId } from "./map-viewport";
 import type { PresetId } from "@/hooks/use-geodata";
@@ -24,6 +27,13 @@ export interface MapControlsProps {
   onBuildings3dChange: (visible: boolean) => void;
   co2Enabled: boolean;
   onCo2EnabledChange: (enabled: boolean) => void;
+  openaqEnabled: boolean;
+  onOpenaqEnabledChange: (enabled: boolean) => void;
+  openaqLoading: boolean;
+  onRefreshOpenaq: () => void;
+  onStartCinematicTour: () => void;
+  presentationMode: boolean;
+  onPresentationModeChange: (enabled: boolean) => void;
   onPresetFetch: (preset: PresetId) => void;
   onClearData: () => void;
   loading: boolean;
@@ -40,6 +50,13 @@ export function MapControls({
   onBuildings3dChange,
   co2Enabled,
   onCo2EnabledChange,
+  openaqEnabled,
+  onOpenaqEnabledChange,
+  openaqLoading,
+  onRefreshOpenaq,
+  onStartCinematicTour,
+  presentationMode,
+  onPresentationModeChange,
   onPresetFetch,
   onClearData,
   loading,
@@ -127,6 +144,47 @@ export function MapControls({
           />
           <Cloud className="size-4 text-muted" />
           <span className="text-sm">CO₂ Atmosphere Overlay</span>
+        </label>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={openaqEnabled}
+            onChange={(e) => {
+              onOpenaqEnabledChange(e.target.checked);
+              if (e.target.checked) onRefreshOpenaq();
+            }}
+            disabled={openaqLoading}
+            className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
+          />
+          {openaqLoading ? (
+            <Loader2 className="size-4 text-muted animate-spin" />
+          ) : (
+            <Wind className="size-4 text-muted" />
+          )}
+          <span className="text-sm">Live Air Quality</span>
+        </label>
+      </div>
+
+      {/* Cinematic Tour */}
+      <div className="space-y-2">
+        <span className="text-sm text-muted">Presentation</span>
+        <button
+          type="button"
+          onClick={onStartCinematicTour}
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg bg-accent hover:bg-accent-muted text-white text-sm font-medium transition-colors"
+        >
+          <Play className="size-4 shrink-0" />
+          Start Cinematic Tour
+        </button>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={presentationMode}
+            onChange={(e) => onPresentationModeChange(e.target.checked)}
+            className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
+          />
+          <Maximize2 className="size-4 text-muted" />
+          <span className="text-sm">Presentation Mode</span>
         </label>
       </div>
 

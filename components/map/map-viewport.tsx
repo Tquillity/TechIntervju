@@ -11,21 +11,13 @@ import {
 import type { BBox } from "@/hooks/use-geodata";
 import type { GeoJSONFeatureCollection } from "@/hooks/use-geodata";
 
-// Alidade Smooth Dark – high-contrast dark vector theme for data overlays
-const STADIA_VECTOR_STYLE =
-  "https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json";
-// Sentinel-2 cloudless (EOX); limit zoom to reduce 404s
-const SENTINEL_RASTER_TILES =
-  "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg";
+// --- REPLACE REDACTED CONSTANTS WITH THESE ---
+const STADIA_VECTOR_STYLE = "https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json";
+const SENTINEL_RASTER_TILES = "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg";
 const SENTINEL_MAX_ZOOM = 13;
-// Esri World Imagery – high-resolution base layer
-const ESRI_IMAGERY_TILES =
-  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
-// RGB terrain (MapLibre demo) for true 3D terrain
-const TERRAIN_SOURCE_URL =
-  "https://demotiles.maplibre.org/terrain-tiles/tiles.json";
-// OpenFreeMap vector tiles for 3D buildings (planet = TileJSON endpoint)
-const OPENFREEMAP_VECTOR = "https://tiles.openfreemap.org/v1/openfreemap";
+const ESRI_IMAGERY_TILES = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+const TERRAIN_SOURCE_URL = "https://demotiles.maplibre.org/terrain-tiles/tiles.json";
+const OPENFREEMAP_VECTOR = "https://tiles.openfreemap.org/v1/openfreemap.json";
 
 const SENTINEL_LAYER_ID = "sentinel-layer";
 const ESRI_LAYER_ID = "esri-layer";
@@ -37,7 +29,11 @@ const NASA_CO2_LAYER_ID = "co2-layer";
 const GEODATA_LAYER_ID = "geodata-layer";
 const GEODATA_SOURCE_ID = "geodata";
 
-/** NASA GIBS AIRS L3 CO2 daily surface concentration; {TIME} = YYYY-MM-DD */
+const OPENAQ_SOURCE_ID = "openaq";
+const OPENAQ_GLOW_LAYER_ID = "openaq-glow";
+const OPENAQ_LAYER_ID = "openaq-layer";
+
+// --- REPLACE THE FUNCTION NEAR LINE 33 WITH THIS ---
 function getNasaCo2TileUrl(time: string): string {
   return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/AIRS_L3_Carbon_Dioxide_IR_Daily_Surface_Concentration/default/${time}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`;
 }
@@ -57,6 +53,10 @@ export interface MapViewportProps {
   co2Enabled?: boolean;
   /** Loaded GeoJSON to display on the map */
   geodata?: GeoJSONFeatureCollection | null;
+  /** OpenAQ PM2.5 GeoJSON for live air quality layer */
+  openaqData?: GeoJSON.FeatureCollection<GeoJSON.Point, { pm25?: number }> | null;
+  /** When true, show OpenAQ air quality circles */
+  openaqEnabled?: boolean;
   /** Callback when map is ready */
   onMapReady?: (map: maplibregl.Map) => void;
   /** Callback when a feature is clicked (for Data Inspector) */
@@ -72,6 +72,8 @@ export function MapViewport({
   selectedDate,
   co2Enabled = false,
   geodata,
+  openaqData,
+  openaqEnabled = false,
   onMapReady,
   onFeatureClick,
   mapRef: externalMapRef,
@@ -411,6 +413,78 @@ export function MapViewport({
     });
   }, [loaded, geodata]);
 
+  // OpenAQ air quality: glow layer + main circle layer (step color by pm25)
+  useEffect(() => {
+    const m = mapInstanceRef.current;
+    if (!m || !loaded) return;
+
+    if (m.getLayer(OPENAQ_LAYER_ID)) m.removeLayer(OPENAQ_LAYER_ID);
+    if (m.getLayer(OPENAQ_GLOW_LAYER_ID)) m.removeLayer(OPENAQ_GLOW_LAYER_ID);
+    if (m.getSource(OPENAQ_SOURCE_ID)) m.removeSource(OPENAQ_SOURCE_ID);
+
+    if (!openaqData || openaqData.features.length === 0) return;
+
+    m.addSource(OPENAQ_SOURCE_ID, { type: "geojson", data: openaqData });
+    m.addLayer(
+      {
+        id: OPENAQ_GLOW_LAYER_ID,
+        type: "circle",
+        source: OPENAQ_SOURCE_ID,
+        paint: {
+          "circle-radius": 24,
+          "circle-blur": 1,
+          "circle-color": [
+            "step",
+            ["get", "pm25"],
+            "#22c55e",
+            12,
+            "#eab308",
+            35,
+            "#f97316",
+            55,
+            "#ef4444",
+          ],
+          "circle-opacity": 0.4,
+        },
+      },
+      BUILDINGS_3D_LAYER_ID
+    );
+    m.addLayer(
+      {
+        id: OPENAQ_LAYER_ID,
+        type: "circle",
+        source: OPENAQ_SOURCE_ID,
+        paint: {
+          "circle-radius": 6,
+          "circle-color": [
+            "step",
+            ["get", "pm25"],
+            "#22c55e",
+            12,
+            "#eab308",
+            35,
+            "#f97316",
+            55,
+            "#ef4444",
+          ],
+          "circle-stroke-width": 1,
+          "circle-stroke-color": "#ffffff",
+        },
+      },
+      OPENAQ_GLOW_LAYER_ID
+    );
+  }, [loaded, openaqData]);
+
+  // OpenAQ layer visibility
+  useEffect(() => {
+    if (!loaded || !mapInstanceRef.current) return;
+    const m = mapInstanceRef.current;
+    for (const id of [OPENAQ_GLOW_LAYER_ID, OPENAQ_LAYER_ID]) {
+      if (!m.getLayer(id)) continue;
+      m.setLayoutProperty(id, "visibility", openaqEnabled ? "visible" : "none");
+    }
+  }, [loaded, openaqEnabled]);
+
   // Feature click for Data Inspector
   useEffect(() => {
     const m = mapInstanceRef.current;
@@ -455,4 +529,44 @@ export function MapViewport({
       style={{ background: "var(--color-surface)" }}
     />
   );
+}
+
+/** Cinematic tour: Alps (3D terrain) → New York (3D buildings) → Global (atmosphere). Chain with moveend. */
+export function startCinematicTour(map: maplibregl.Map | null): void {
+  if (!map) return;
+  const duration = 4000;
+
+  // Stop 1: Alps (3D mountains)
+  map.flyTo({
+    center: [7.74, 46.02],
+    zoom: 12,
+    pitch: 60,
+    bearing: 0,
+    duration,
+    essential: true,
+  });
+
+  map.once("moveend", () => {
+    // Stop 2: New York (3D cities)
+    map.flyTo({
+      center: [-74.006, 40.7128],
+      zoom: 15.5,
+      pitch: 55,
+      bearing: -20,
+      duration,
+      essential: true,
+    });
+
+    map.once("moveend", () => {
+      // Stop 3: Global view (atmosphere)
+      map.flyTo({
+        center: [0, 20],
+        zoom: 2.5,
+        pitch: 0,
+        bearing: 0,
+        duration,
+        essential: true,
+      });
+    });
+  });
 }
