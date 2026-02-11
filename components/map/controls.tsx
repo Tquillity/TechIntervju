@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Layers,
   Satellite,
@@ -11,14 +12,47 @@ import {
   Loader2,
   X,
   Building2,
-  ImageIcon,
+  Landmark,
   Cloud,
   Play,
   Wind,
   Maximize2,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import type { BaseLayerId } from "./map-viewport";
 import type { PresetId } from "@/hooks/use-geodata";
+
+function CollapsibleSection({
+  title,
+  expanded,
+  onToggle,
+  children,
+}: {
+  title: string;
+  expanded: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex items-center gap-2 w-full text-left text-sm text-muted hover:text-foreground transition-colors"
+        aria-expanded={expanded}
+      >
+        {expanded ? (
+          <ChevronDown className="size-4 shrink-0" />
+        ) : (
+          <ChevronRight className="size-4 shrink-0" />
+        )}
+        <span>{title}</span>
+      </button>
+      {expanded && children}
+    </div>
+  );
+}
 
 export interface MapControlsProps {
   baseLayer: BaseLayerId;
@@ -65,6 +99,11 @@ export function MapControls({
   onCustomUrlChange,
   onFetchCustomUrl,
 }: MapControlsProps) {
+  const [baseLayerOpen, setBaseLayerOpen] = useState(true);
+  const [layersAndPresentationOpen, setLayersAndPresentationOpen] = useState(true);
+  const [presetsOpen, setPresetsOpen] = useState(true);
+  const [customUrlOpen, setCustomUrlOpen] = useState(true);
+
   return (
     <div className="glass-panel p-4 space-y-4 w-72">
       <div className="flex items-center gap-2 text-accent font-semibold">
@@ -72,125 +111,133 @@ export function MapControls({
         <span>Magic Import</span>
       </div>
 
-      {/* Base layer switcher: Vector | Sentinel-2 | High-Res Esri */}
-      <div className="space-y-2">
-        <span className="text-sm text-muted">Base layer</span>
+      {/* Base layer – collapsible */}
+      <CollapsibleSection
+        title="Base layer"
+        expanded={baseLayerOpen}
+        onToggle={() => setBaseLayerOpen((v) => !v)}
+      >
         <div className="flex flex-col gap-1 rounded-lg overflow-hidden border border-border">
-          <div className="flex">
+          <button
+            type="button"
+            onClick={() => onBaseLayerChange("vector")}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 text-sm transition-colors ${
+              baseLayer === "vector"
+                ? "bg-accent text-white"
+                : "bg-surface-elevated text-muted hover:bg-border/50"
+            }`}
+          >
+            <MapIcon className="size-4 shrink-0" />
+            Vector
+          </button>
+          <button
+            type="button"
+            onClick={() => onBaseLayerChange("satellite")}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 text-sm transition-colors ${
+              baseLayer === "satellite"
+                ? "bg-accent text-white"
+                : "bg-surface-elevated text-muted hover:bg-border/50"
+            }`}
+          >
+            <Satellite className="size-4 shrink-0" />
+            Sentinel-2
+          </button>
+          <button
+            type="button"
+            onClick={() => onBaseLayerChange("high-res")}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 text-sm transition-colors ${
+              baseLayer === "high-res"
+                ? "bg-accent text-white"
+                : "bg-surface-elevated text-muted hover:bg-border/50"
+            }`}
+          >
+            <Landmark className="size-4 shrink-0" />
+            High-Res
+          </button>
+        </div>
+      </CollapsibleSection>
+
+      {/* Layers & presentation: 3D, Overlays, Presentation – one collapsible group */}
+      <CollapsibleSection
+        title="Layers & presentation"
+        expanded={layersAndPresentationOpen}
+        onToggle={() => setLayersAndPresentationOpen((v) => !v)}
+      >
+        <div className="space-y-4 pl-0">
+          <div className="space-y-2">
+            <span className="text-sm text-muted">3D</span>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={buildings3dVisible}
+                onChange={(e) => onBuildings3dChange(e.target.checked)}
+                className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
+              />
+              <Building2 className="size-4 text-muted" />
+              <span className="text-sm">3D Buildings</span>
+            </label>
+          </div>
+          <div className="space-y-2">
+            <span className="text-sm text-muted">Overlays</span>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={co2Enabled}
+                onChange={(e) => onCo2EnabledChange(e.target.checked)}
+                className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
+              />
+              <Cloud className="size-4 text-muted" />
+              <span className="text-sm">CO₂ Atmosphere Overlay</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={openaqEnabled}
+                onChange={(e) => {
+                  onOpenaqEnabledChange(e.target.checked);
+                  if (e.target.checked) onRefreshOpenaq();
+                }}
+                disabled={openaqLoading}
+                className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
+              />
+              {openaqLoading ? (
+                <Loader2 className="size-4 text-muted animate-spin" />
+              ) : (
+                <Wind className="size-4 text-muted" />
+              )}
+              <span className="text-sm">Live Air Quality</span>
+            </label>
+          </div>
+          <div className="space-y-2">
+            <span className="text-sm text-muted">Presentation</span>
             <button
               type="button"
-              onClick={() => onBaseLayerChange("vector")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm transition-colors ${
-                baseLayer === "vector"
-                  ? "bg-accent text-white"
-                  : "bg-surface-elevated text-muted hover:bg-border/50"
-              }`}
+              onClick={onStartCinematicTour}
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg bg-accent hover:bg-accent-muted text-white text-sm font-medium transition-colors"
             >
-              <MapIcon className="size-4" />
-              Vector
+              <Play className="size-4 shrink-0" />
+              Start Cinematic Tour
             </button>
-            <button
-              type="button"
-              onClick={() => onBaseLayerChange("satellite")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm transition-colors ${
-                baseLayer === "satellite"
-                  ? "bg-accent text-white"
-                  : "bg-surface-elevated text-muted hover:bg-border/50"
-              }`}
-            >
-              <Satellite className="size-4" />
-              Sentinel-2
-            </button>
-            <button
-              type="button"
-              onClick={() => onBaseLayerChange("high-res")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm transition-colors ${
-                baseLayer === "high-res"
-                  ? "bg-accent text-white"
-                  : "bg-surface-elevated text-muted hover:bg-border/50"
-              }`}
-            >
-              <ImageIcon className="size-4" />
-              High-Res
-            </button>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={presentationMode}
+                onChange={(e) => onPresentationModeChange(e.target.checked)}
+                className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
+              />
+              <Maximize2 className="size-4 text-muted" />
+              <span className="text-sm">Presentation Mode</span>
+            </label>
           </div>
         </div>
-      </div>
+      </CollapsibleSection>
 
-      {/* 3D Building toggle */}
-      <div className="space-y-2">
-        <span className="text-sm text-muted">3D</span>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={buildings3dVisible}
-            onChange={(e) => onBuildings3dChange(e.target.checked)}
-            className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
-          />
-          <Building2 className="size-4 text-muted" />
-          <span className="text-sm">3D Buildings</span>
-        </label>
-      </div>
-
-      {/* CO2 Atmosphere Overlay */}
-      <div className="space-y-2">
-        <span className="text-sm text-muted">Overlays</span>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={co2Enabled}
-            onChange={(e) => onCo2EnabledChange(e.target.checked)}
-            className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
-          />
-          <Cloud className="size-4 text-muted" />
-          <span className="text-sm">CO₂ Atmosphere Overlay</span>
-        </label>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={openaqEnabled}
-            onChange={(e) => {
-              onOpenaqEnabledChange(e.target.checked);
-              if (e.target.checked) onRefreshOpenaq();
-            }}
-            disabled={openaqLoading}
-            className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
-          />
-          {openaqLoading ? (
-            <Loader2 className="size-4 text-muted animate-spin" />
-          ) : (
-            <Wind className="size-4 text-muted" />
-          )}
-          <span className="text-sm">Live Air Quality</span>
-        </label>
-      </div>
-
-      {/* Cinematic Tour */}
-      <div className="space-y-2">
-        <span className="text-sm text-muted">Presentation</span>
-        <button
-          type="button"
-          onClick={onStartCinematicTour}
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg bg-accent hover:bg-accent-muted text-white text-sm font-medium transition-colors"
-        >
-          <Play className="size-4 shrink-0" />
-          Start Cinematic Tour
-        </button>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={presentationMode}
-            onChange={(e) => onPresentationModeChange(e.target.checked)}
-            className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
-          />
-          <Maximize2 className="size-4 text-muted" />
-          <span className="text-sm">Presentation Mode</span>
-        </label>
-      </div>
-
-      {/* Presets */}
-      <div className="space-y-2">
-        <span className="text-sm text-muted">Presets</span>
+      {/* Presets – collapsible */}
+      <CollapsibleSection
+        title="Presets"
+        expanded={presetsOpen}
+        onToggle={() => setPresetsOpen((v) => !v)}
+      >
         <div className="grid gap-2">
           <button
             type="button"
@@ -232,11 +279,14 @@ export function MapControls({
             <span className="text-sm">Recent Satellite Anomalies</span>
           </button>
         </div>
-      </div>
+      </CollapsibleSection>
 
-      {/* Custom URL */}
-      <div className="space-y-2">
-        <span className="text-sm text-muted">Custom GeoJSON URL</span>
+      {/* Custom GeoJSON URL – collapsible */}
+      <CollapsibleSection
+        title="Custom GeoJSON URL"
+        expanded={customUrlOpen}
+        onToggle={() => setCustomUrlOpen((v) => !v)}
+      >
         <div className="flex gap-2">
           <input
             type="url"
@@ -256,7 +306,7 @@ export function MapControls({
             <Link className="size-4" />
           </button>
         </div>
-      </div>
+      </CollapsibleSection>
 
       {hasData && (
         <button

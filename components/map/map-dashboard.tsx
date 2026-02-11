@@ -2,6 +2,7 @@
 
 import type maplibregl from "maplibre-gl";
 import { useRef, useState, useCallback, useEffect } from "react";
+import { PanelLeftOpen } from "lucide-react";
 import { MapViewport, startCinematicTour, type BaseLayerId } from "./map-viewport";
 import { MapControls } from "./controls";
 import { DataInspector } from "./data-inspector";
@@ -55,6 +56,19 @@ export function MapDashboard() {
     startCinematicTour(mapRef.current);
   }, []);
 
+  // ESC (and Enter on some OS) exits presentation mode
+  useEffect(() => {
+    if (!presentationMode) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" || e.key === "Enter") {
+        setPresentationMode(false);
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [presentationMode]);
+
   const presentationHide = presentationMode ? "opacity-0 pointer-events-none transition-opacity duration-300" : "transition-opacity duration-300";
 
   return (
@@ -71,6 +85,19 @@ export function MapDashboard() {
         openaqEnabled={openaqEnabled}
         onFeatureClick={setInspectedFeature}
       />
+
+      {/* Presentation mode: small expand button top-left to show menu again */}
+      {presentationMode && (
+        <button
+          type="button"
+          onClick={() => setPresentationMode(false)}
+          className="absolute top-4 left-4 z-20 flex items-center justify-center size-10 rounded-lg bg-surface-elevated/95 hover:bg-surface-elevated border border-border shadow-lg text-muted hover:text-foreground transition-colors"
+          aria-label="Exit presentation mode (show menu)"
+          title="Exit presentation mode (Esc)"
+        >
+          <PanelLeftOpen className="size-5" />
+        </button>
+      )}
 
       {/* Mock data banner – hidden in presentation mode */}
       {isMocked && (
