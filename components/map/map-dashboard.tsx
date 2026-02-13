@@ -225,10 +225,12 @@ export function MapDashboard() {
         />
       </div>
 
-      {/* Temporal atmosphere timeline – hidden in presentation mode */}
-      <div className={`absolute bottom-8 left-1/2 -translate-x-1/2 z-10 w-full max-w-md px-4 ${presentationHide}`}>
-        <TimelineSlider value={selectedDate} onChange={setSelectedDate} maxDate={maxAvailableDate} />
-      </div>
+      {/* Temporal atmosphere timeline – only visible when a date-driven overlay is active */}
+      {(co2Enabled || ndviEnabled || soilEnabled || aodEnabled || no2Enabled) && (
+        <div className={`absolute bottom-8 left-1/2 -translate-x-1/2 z-10 w-full max-w-md px-4 ${presentationHide}`}>
+          <TimelineSlider value={selectedDate} onChange={setSelectedDate} maxDate={maxAvailableDate} />
+        </div>
+      )}
 
       {/* Bottom-right: Inspector above list so it never overlaps Data Records */}
       <div className={`absolute bottom-10 right-4 z-20 flex flex-col items-end gap-3 ${presentationHide}`}>
