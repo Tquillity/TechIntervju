@@ -13,7 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full">
-      <body className="h-full min-h-screen overflow-hidden">
+      <body className="h-full min-h-screen">
         {children}
       </body>
     </html>

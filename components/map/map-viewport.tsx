@@ -150,7 +150,11 @@ export function MapViewport({
     (bbox: BBox, duration = 3200) => {
       const m = mapInstanceRef.current;
       if (!m) return;
-      const [minLon, minLat, maxLon, maxLat] = bbox;
+      // Clamp to valid geographic bounds to prevent "Invalid LngLat" errors
+      const minLon = Math.max(-180, Math.min(180, bbox[0]));
+      const minLat = Math.max(-90, Math.min(90, bbox[1]));
+      const maxLon = Math.max(-180, Math.min(180, bbox[2]));
+      const maxLat = Math.max(-90, Math.min(90, bbox[3]));
       const padding = { top: 80, bottom: 80, left: 80, right: 80 };
       m.fitBounds(
         [

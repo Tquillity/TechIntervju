@@ -21,7 +21,12 @@ function getCo2FallbackDateYYYYMMDD(): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function MapDashboard() {
+interface MapDashboardProps {
+  embeddedMode?: boolean;
+  onEmbeddedModeToggle?: () => void;
+}
+
+export function MapDashboard({ embeddedMode = false, onEmbeddedModeToggle }: MapDashboardProps) {
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [baseLayer, setBaseLayer] = useState<BaseLayerId>("vector");
   const [buildings3dVisible, setBuildings3dVisible] = useState(false);
@@ -110,6 +115,9 @@ export function MapDashboard() {
 
   const presentationHide = presentationMode ? "opacity-0 pointer-events-none transition-opacity duration-300" : "transition-opacity duration-300";
 
+  // Scale factor for UI overlays in embedded mode (map canvas stays full-size)
+  const uiScale = embeddedMode ? 0.55 : 1;
+
   return (
     <div className="relative w-full h-full @container">
       <MapViewport
@@ -132,6 +140,19 @@ export function MapDashboard() {
         onMapReady={handleMapReady}
         onFeatureClick={setInspectedFeature}
       />
+
+      {/* UI overlay wrapper: scales down all controls/panels in embedded mode */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          transform: uiScale < 1 ? `scale(${uiScale})` : undefined,
+          transformOrigin: "top left",
+          width: uiScale < 1 ? `${100 / uiScale}%` : undefined,
+          height: uiScale < 1 ? `${100 / uiScale}%` : undefined,
+        }}
+      >
+      {/* Re-enable pointer events on children */}
+      <div className="absolute inset-0 *:pointer-events-auto">
 
       {/* Presentation mode: small expand button top-left to show menu again */}
       {presentationMode && (
@@ -210,6 +231,8 @@ export function MapDashboard() {
           onFetchCustomUrl={handleFetchCustomUrl}
           welcomeBannerVisible={welcomeBannerVisible}
           onWelcomeBannerToggle={() => setWelcomeBannerVisible((v) => !v)}
+          embeddedMode={embeddedMode}
+          onEmbeddedModeToggle={onEmbeddedModeToggle}
         />
       </div>
 
@@ -262,6 +285,9 @@ export function MapDashboard() {
           className="static"
         />
       </div>
+
+      </div>{/* end pointer-events wrapper */}
+      </div>{/* end scale wrapper */}
     </div>
   );
 }

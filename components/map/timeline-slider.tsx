@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useRef, useCallback } from "react";
 import { Calendar } from "lucide-react";
 
 function formatDateYYYYMMDD(d: Date): string {
@@ -54,15 +54,33 @@ export function TimelineSlider({ value, onChange, maxDate }: TimelineSliderProps
   const minIndex = 0;
   const maxIndex = dates.length - 1;
 
-  const index = useMemo(() => dateToIndex(value, dates), [value, dates]);
-  const clampedValue = dates[index] ?? value;
-  const displayDate = clampedValue;
+  const committedIndex = useMemo(() => dateToIndex(value, dates), [value, dates]);
 
-  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const i = Number(e.target.value);
-    const clamped = Math.min(maxIndex, Math.max(minIndex, i));
-    onChange(dates[clamped] ?? value);
-  };
+  // Local preview index while dragging (null = not dragging, use committed)
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const draggingRef = useRef(false);
+
+  const displayIndex = previewIndex ?? committedIndex;
+  const displayDate = dates[displayIndex] ?? value;
+
+  // During drag: update the visual preview only (no data fetch)
+  const handleInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const i = Math.min(maxIndex, Math.max(minIndex, Number(e.target.value)));
+      setPreviewIndex(i);
+      draggingRef.current = true;
+    },
+    [minIndex, maxIndex]
+  );
+
+  // On release: commit the final date (triggers data fetch)
+  const commitValue = useCallback(() => {
+    const idx = previewIndex ?? committedIndex;
+    const date = dates[idx] ?? value;
+    draggingRef.current = false;
+    setPreviewIndex(null);
+    onChange(date);
+  }, [previewIndex, committedIndex, dates, value, onChange]);
 
   return (
     <div className="glass-panel p-4 space-y-3 w-full max-w-md">
@@ -82,10 +100,12 @@ export function TimelineSlider({ value, onChange, maxDate }: TimelineSliderProps
         type="range"
         min={minIndex}
         max={maxIndex}
-        value={index}
-        onChange={handleSliderChange}
+        value={displayIndex}
+        onChange={handleInput}
+        onMouseUp={() => commitValue()}
+        onTouchEnd={() => commitValue()}
         className="w-full h-2 rounded-full appearance-none bg-surface-elevated border border-border accent-accent cursor-pointer"
-        aria-label="Select date for CO2 layer"
+        aria-label="Select date for atmosphere overlay"
       />
     </div>
   );
