@@ -7,6 +7,7 @@ import { MapViewport, startCinematicTour, type BaseLayerId } from "./map-viewpor
 import { MapControls } from "./controls";
 import { DataInspector } from "./data-inspector";
 import { TimelineSlider } from "./timeline-slider";
+import { PerformanceHUD } from "./performance-hud";
 import { useGeoData, findLatestNasaDate } from "@/hooks/use-geodata";
 import { useOpenAQ } from "@/hooks/use-openaq";
 import { padBBox } from "@/hooks/use-geodata";
@@ -26,6 +27,12 @@ export function MapDashboard() {
   const [selectedDate, setSelectedDate] = useState(() => getCo2FallbackDateYYYYMMDD());
   const [co2Enabled, setCo2Enabled] = useState(false);
   const [openaqEnabled, setOpenaqEnabled] = useState(false);
+  const [ndviEnabled, setNdviEnabled] = useState(false);
+  const [soilEnabled, setSoilEnabled] = useState(false);
+  const [firesEnabled, setFiresEnabled] = useState(false);
+  const [firesData, setFiresData] = useState<GeoJSON.FeatureCollection<GeoJSON.Point> | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
   const [presentationMode, setPresentationMode] = useState(false);
   const [customUrl, setCustomUrl] = useState("");
   const [inspectedFeature, setInspectedFeature] =
@@ -47,6 +54,16 @@ export function MapDashboard() {
     if (openaqEnabled && !openaqData) refreshOpenAQ();
   }, [openaqEnabled, openaqData, refreshOpenAQ]);
 
+  // FIRMS proxy: fetch USGS Latest Hour when fires overlay enabled (open API, same logic as FIRMS)
+  useEffect(() => {
+    if (!firesEnabled) return;
+    const url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson";
+    fetch(url, { mode: "cors" })
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("HTTP " + res.status))))
+      .then((fc: GeoJSON.FeatureCollection) => setFiresData(fc as GeoJSON.FeatureCollection<GeoJSON.Point>))
+      .catch(() => setFiresData(null));
+  }, [firesEnabled]);
+
   // Probe NASA GIBS for latest available CO2 date on mount; clamp timeline to available range
   useEffect(() => {
     const fallback = getCo2FallbackDateYYYYMMDD();
@@ -62,6 +79,11 @@ export function MapDashboard() {
   const handleFetchCustomUrl = useCallback(() => {
     if (customUrl.trim()) fetchByUrl(customUrl.trim());
   }, [customUrl, fetchByUrl]);
+
+  const handleMapReady = useCallback((map: maplibregl.Map) => {
+    setMapReady(true);
+    setMapInstance(map);
+  }, []);
 
   const handleStartCinematicTour = useCallback(() => {
     startCinematicTour(mapRef.current);
@@ -91,9 +113,14 @@ export function MapDashboard() {
         buildings3dVisible={buildings3dVisible}
         selectedDate={selectedDate}
         co2Enabled={co2Enabled}
+        ndviEnabled={ndviEnabled}
+        soilEnabled={soilEnabled}
+        firesEnabled={firesEnabled}
+        firesData={firesData ?? null}
         geodata={geodata ?? null}
         openaqData={openaqData ?? null}
         openaqEnabled={openaqEnabled}
+        onMapReady={handleMapReady}
         onFeatureClick={setInspectedFeature}
       />
 
@@ -130,6 +157,12 @@ export function MapDashboard() {
           onBuildings3dChange={setBuildings3dVisible}
           co2Enabled={co2Enabled}
           onCo2EnabledChange={setCo2Enabled}
+          ndviEnabled={ndviEnabled}
+          onNdviEnabledChange={setNdviEnabled}
+          soilEnabled={soilEnabled}
+          onSoilEnabledChange={setSoilEnabled}
+          firesEnabled={firesEnabled}
+          onFiresEnabledChange={setFiresEnabled}
           openaqEnabled={openaqEnabled}
           onOpenaqEnabledChange={setOpenaqEnabled}
           openaqLoading={openaqLoading}
@@ -158,6 +191,11 @@ export function MapDashboard() {
           feature={inspectedFeature}
           onClose={() => setInspectedFeature(null)}
         />
+      </div>
+
+      {/* Performance HUD – bottom-right, toggleable */}
+      <div className={presentationHide}>
+        <PerformanceHUD map={mapInstance} mapRef={mapRef} mapReady={mapReady} />
       </div>
     </div>
   );

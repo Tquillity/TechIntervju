@@ -19,6 +19,9 @@ import {
   Maximize2,
   ChevronDown,
   ChevronRight,
+  Leaf,
+  Droplets,
+  Flame,
 } from "lucide-react";
 import type { BaseLayerId } from "./map-viewport";
 import type { PresetId } from "@/hooks/use-geodata";
@@ -61,6 +64,12 @@ export interface MapControlsProps {
   onBuildings3dChange: (visible: boolean) => void;
   co2Enabled: boolean;
   onCo2EnabledChange: (enabled: boolean) => void;
+  ndviEnabled: boolean;
+  onNdviEnabledChange: (enabled: boolean) => void;
+  soilEnabled: boolean;
+  onSoilEnabledChange: (enabled: boolean) => void;
+  firesEnabled: boolean;
+  onFiresEnabledChange: (enabled: boolean) => void;
   openaqEnabled: boolean;
   onOpenaqEnabledChange: (enabled: boolean) => void;
   openaqLoading: boolean;
@@ -84,6 +93,12 @@ export function MapControls({
   onBuildings3dChange,
   co2Enabled,
   onCo2EnabledChange,
+  ndviEnabled,
+  onNdviEnabledChange,
+  soilEnabled,
+  onSoilEnabledChange,
+  firesEnabled,
+  onFiresEnabledChange,
   openaqEnabled,
   onOpenaqEnabledChange,
   openaqLoading,
@@ -187,7 +202,37 @@ export function MapControls({
                 className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
               />
               <Cloud className="size-4 text-muted" />
-              <span className="text-sm">CO₂ Atmosphere Overlay</span>
+              <span className="text-sm">Ozone Total Column (OMPS)</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={ndviEnabled}
+                onChange={(e) => onNdviEnabledChange(e.target.checked)}
+                className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
+              />
+              <Leaf className="size-4 text-muted" />
+              <span className="text-sm">Vegetation (NDVI)</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={soilEnabled}
+                onChange={(e) => onSoilEnabledChange(e.target.checked)}
+                className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
+              />
+              <Droplets className="size-4 text-muted" />
+              <span className="text-sm">Precipitation Rate (IMERG)</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={firesEnabled}
+                onChange={(e) => onFiresEnabledChange(e.target.checked)}
+                className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
+              />
+              <Flame className="size-4 text-muted" />
+              <span className="text-sm">Active Thermal Anomaly (NASA FIRMS)</span>
             </label>
             <label className="flex items-center gap-3 cursor-pointer">
               <input

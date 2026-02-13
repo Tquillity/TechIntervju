@@ -143,12 +143,12 @@ export function padBBox(bbox: BBox, padding = 1.2): BBox {
   ];
 }
 
-/** Sample tile URL for NASA GIBS AIRS CO2 availability probe (HEAD request). Layer: AIRS_CO2_Total_Column_Day. */
-const NASA_GIBS_CO2_PROBE_URL = (date: string) =>
-  `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/AIRS_CO2_Total_Column_Day/default/${date}/GoogleMapsCompatible_Level6/0/0/0.png`;
+/** Sample tile URL for NASA GIBS OMPS Ozone availability probe (HEAD request). */
+const NASA_GIBS_PROBE_URL = (date: string) =>
+  `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/OMPS_Ozone_Total_Column/default/${date}/GoogleMapsCompatible_Level6/0/0/0.png`;
 
 /**
- * Find the latest date for which NASA GIBS AIRS CO2 tiles are available.
+ * Find the latest date for which NASA GIBS OMPS Ozone tiles are available.
  * Tries from today backwards (max 10 attempts). Uses HEAD to avoid downloading tiles.
  * @returns YYYY-MM-DD of first date with response.ok, or null if none found.
  */
@@ -159,7 +159,7 @@ export async function findLatestNasaDate(): Promise<string | null> {
     d.setDate(d.getDate() - i);
     const date = d.toISOString().slice(0, 10);
     try {
-      const res = await fetch(NASA_GIBS_CO2_PROBE_URL(date), { method: "HEAD" });
+      const res = await fetch(NASA_GIBS_PROBE_URL(date), { method: "HEAD" });
       if (res.ok) return date;
     } catch {
       // network/CORS: skip this date

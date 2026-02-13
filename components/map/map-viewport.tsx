@@ -11,7 +11,7 @@ import {
 import type { BBox } from "@/hooks/use-geodata";
 import type { GeoJSONFeatureCollection } from "@/hooks/use-geodata";
 
-// --- REPLACE REDACTED CONSTANTS WITH THESE ---
+// --- VERIFIED URLS FOR SPRINT 6 ---
 const STADIA_VECTOR_STYLE = "https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json";
 const SENTINEL_RASTER_TILES = "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg";
 const SENTINEL_MAX_ZOOM = 13;
@@ -32,9 +32,27 @@ const OPENAQ_SOURCE_ID = "openaq";
 const OPENAQ_GLOW_LAYER_ID = "openaq-glow";
 const OPENAQ_LAYER_ID = "openaq-layer";
 
-/** NASA GIBS WMTS: AIRS CO2 Total Column (Day) – production layer ID. */
-function getNasaCo2TileUrl(time: string): string {
-  return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/AIRS_CO2_Total_Column_Day/default/${time}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`;
+const NDVI_SOURCE_ID = "nasa-ndvi";
+const NDVI_LAYER_ID = "ndvi-layer";
+const SMAP_SOURCE_ID = "nasa-smap";
+const SMAP_LAYER_ID = "smap-layer";
+const FIRMS_PROXY_SOURCE_ID = "firms-proxy";
+const FIRMS_PROXY_GLOW_LAYER_ID = "firms-proxy-glow";
+const FIRMS_PROXY_LAYER_ID = "firms-proxy-layer";
+
+/** NASA GIBS: OMPS Ozone Total Column (daily, near-real-time, Suomi NPP). */
+function getNasaOzoneTileUrl(time: string): string {
+  return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/OMPS_Ozone_Total_Column/default/${time}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`;
+}
+
+/** NASA GIBS: MODIS Terra NDVI 8-Day composite (current, Level9). */
+function getNasaNdviTileUrl(time: string): string {
+  return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_NDVI_8Day/default/${time}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`;
+}
+
+/** NASA GIBS: IMERG Precipitation Rate (daily, near-real-time, GPM). */
+function getImergPrecipTileUrl(time: string): string {
+  return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/IMERG_Precipitation_Rate/default/${time}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`;
 }
 
 export type BaseLayerId = "vector" | "satellite" | "high-res";
@@ -56,6 +74,14 @@ export interface MapViewportProps {
   openaqData?: GeoJSON.FeatureCollection<GeoJSON.Point, { pm25?: number }> | null;
   /** When true, show OpenAQ air quality circles */
   openaqEnabled?: boolean;
+  /** When true, show NASA MODIS NDVI (vegetation) overlay */
+  ndviEnabled?: boolean;
+  /** When true, show NASA SMAP soil moisture overlay */
+  soilEnabled?: boolean;
+  /** When true, show Active Thermal Anomaly (NASA FIRMS proxy) layer – top-most */
+  firesEnabled?: boolean;
+  /** GeoJSON points for FIRMS proxy (e.g. USGS Latest Hour); styled as thermal anomalies */
+  firesData?: GeoJSON.FeatureCollection<GeoJSON.Point> | null;
   /** Callback when map is ready */
   onMapReady?: (map: maplibregl.Map) => void;
   /** Callback when a feature is clicked (for Data Inspector) */
@@ -73,6 +99,10 @@ export function MapViewport({
   geodata,
   openaqData,
   openaqEnabled = false,
+  ndviEnabled = false,
+  soilEnabled = false,
+  firesEnabled = false,
+  firesData,
   onMapReady,
   onFeatureClick,
   mapRef: externalMapRef,
@@ -215,10 +245,10 @@ export function MapViewport({
       if (!mapInstance.getSource(NASA_CO2_SOURCE_ID)) {
         mapInstance.addSource(NASA_CO2_SOURCE_ID, {
           type: "raster",
-          tiles: [getNasaCo2TileUrl(initialCo2Time)],
+          tiles: [getNasaOzoneTileUrl(initialCo2Time)],
           tileSize: 256,
           maxzoom: 6,
-          attribution: "NASA GIBS / AIRS CO₂",
+          attribution: "NASA GIBS / OMPS Ozone Total Column",
         });
       }
 
@@ -281,6 +311,53 @@ export function MapViewport({
             maxzoom: 6,
             layout: { visibility: "none" },
             paint: { "raster-opacity": 0.7 },
+          },
+          BUILDINGS_3D_LAYER_ID
+        );
+      }
+
+      // NDVI (MODIS Terra NDVI 8-Day) – same stack as ozone overlay
+      const ndviTime = initialCo2Time;
+      if (!mapInstance.getSource(NDVI_SOURCE_ID)) {
+        mapInstance.addSource(NDVI_SOURCE_ID, {
+          type: "raster",
+          tiles: [getNasaNdviTileUrl(ndviTime)],
+          tileSize: 256,
+          maxzoom: 9,
+          attribution: "NASA GIBS / MODIS Terra NDVI 8-Day",
+        });
+        mapInstance.addLayer(
+          {
+            id: NDVI_LAYER_ID,
+            type: "raster",
+            source: NDVI_SOURCE_ID,
+            minzoom: 0,
+            maxzoom: 9,
+            layout: { visibility: "none" },
+            paint: { "raster-opacity": 0.8 },
+          },
+          BUILDINGS_3D_LAYER_ID
+        );
+      }
+
+      // SMAP Soil Moisture – same stack
+      if (!mapInstance.getSource(SMAP_SOURCE_ID)) {
+        mapInstance.addSource(SMAP_SOURCE_ID, {
+          type: "raster",
+          tiles: [getImergPrecipTileUrl(initialCo2Time)],
+          tileSize: 256,
+          maxzoom: 6,
+          attribution: "NASA GIBS / IMERG Precipitation Rate",
+        });
+        mapInstance.addLayer(
+          {
+            id: SMAP_LAYER_ID,
+            type: "raster",
+            source: SMAP_SOURCE_ID,
+            minzoom: 0,
+            maxzoom: 6,
+            layout: { visibility: "none" },
+            paint: { "raster-opacity": 0.75 },
           },
           BUILDINGS_3D_LAYER_ID
         );
@@ -349,7 +426,7 @@ export function MapViewport({
       | (maplibregl.RasterTileSource & { setTiles?: (tiles: string[]) => void })
       | undefined;
     if (source?.setTiles) {
-      source.setTiles([getNasaCo2TileUrl(selectedDate)]);
+      source.setTiles([getNasaOzoneTileUrl(selectedDate)]);
     }
   }, [loaded, selectedDate]);
 
@@ -364,6 +441,32 @@ export function MapViewport({
       co2Enabled ? "visible" : "none"
     );
   }, [loaded, co2Enabled]);
+
+  // NDVI: update tile URL to selected date (8-Day composite); toggle visibility
+  useEffect(() => {
+    if (!loaded || !selectedDate || !mapInstanceRef.current) return;
+    const m = mapInstanceRef.current;
+    const source = m.getSource(NDVI_SOURCE_ID) as
+      | (maplibregl.RasterTileSource & { setTiles?: (tiles: string[]) => void })
+      | undefined;
+    if (source?.setTiles) source.setTiles([getNasaNdviTileUrl(selectedDate)]);
+    if (m.getLayer(NDVI_LAYER_ID)) {
+      m.setLayoutProperty(NDVI_LAYER_ID, "visibility", ndviEnabled ? "visible" : "none");
+    }
+  }, [loaded, selectedDate, ndviEnabled]);
+
+  // SMAP: update tile URL to selected date; toggle visibility
+  useEffect(() => {
+    if (!loaded || !selectedDate || !mapInstanceRef.current) return;
+    const m = mapInstanceRef.current;
+    const source = m.getSource(SMAP_SOURCE_ID) as
+      | (maplibregl.RasterTileSource & { setTiles?: (tiles: string[]) => void })
+      | undefined;
+    if (source?.setTiles) source.setTiles([getImergPrecipTileUrl(selectedDate)]);
+    if (m.getLayer(SMAP_LAYER_ID)) {
+      m.setLayoutProperty(SMAP_LAYER_ID, "visibility", soilEnabled ? "visible" : "none");
+    }
+  }, [loaded, selectedDate, soilEnabled]);
 
   // Cinematic fly-to when bbox is set (e.g. after data load)
   useEffect(() => {
@@ -483,6 +586,52 @@ export function MapViewport({
     }
   }, [loaded, openaqEnabled]);
 
+  // Active Thermal Anomaly (NASA FIRMS proxy): USGS Latest Hour styled as pulsing orange/red heat rings – TOP-MOST
+  useEffect(() => {
+    const m = mapInstanceRef.current;
+    if (!m || !loaded) return;
+
+    if (m.getLayer(FIRMS_PROXY_LAYER_ID)) m.removeLayer(FIRMS_PROXY_LAYER_ID);
+    if (m.getLayer(FIRMS_PROXY_GLOW_LAYER_ID)) m.removeLayer(FIRMS_PROXY_GLOW_LAYER_ID);
+    if (m.getSource(FIRMS_PROXY_SOURCE_ID)) m.removeSource(FIRMS_PROXY_SOURCE_ID);
+
+    if (!firesData || firesData.features.length === 0) return;
+
+    m.addSource(FIRMS_PROXY_SOURCE_ID, { type: "geojson", data: firesData });
+    m.addLayer({
+      id: FIRMS_PROXY_GLOW_LAYER_ID,
+      type: "circle",
+      source: FIRMS_PROXY_SOURCE_ID,
+      paint: {
+        "circle-radius": 28,
+        "circle-blur": 0.85,
+        "circle-color": "#ff6b35",
+        "circle-opacity": 0.5,
+      },
+    });
+    m.addLayer({
+      id: FIRMS_PROXY_LAYER_ID,
+      type: "circle",
+      source: FIRMS_PROXY_SOURCE_ID,
+      paint: {
+        "circle-radius": 8,
+        "circle-color": "#dc2626",
+        "circle-stroke-width": 2,
+        "circle-stroke-color": "#f97316",
+      },
+    });
+  }, [loaded, firesData]);
+
+  // FIRMS proxy layer visibility (top-most layer)
+  useEffect(() => {
+    if (!loaded || !mapInstanceRef.current) return;
+    const m = mapInstanceRef.current;
+    for (const id of [FIRMS_PROXY_GLOW_LAYER_ID, FIRMS_PROXY_LAYER_ID]) {
+      if (!m.getLayer(id)) continue;
+      m.setLayoutProperty(id, "visibility", firesEnabled ? "visible" : "none");
+    }
+  }, [loaded, firesEnabled]);
+
   // Feature click for Data Inspector
   useEffect(() => {
     const m = mapInstanceRef.current;
@@ -529,42 +678,57 @@ export function MapViewport({
   );
 }
 
-/** Cinematic tour: Alps (3D terrain) → New York (3D buildings) → Global (atmosphere). Chain with moveend. */
-export function startCinematicTour(map: maplibregl.Map | null): void {
-  if (!map) return;
-  const duration = 4000;
+/**
+ * Cinematic tour: Alps → NYC → Global.
+ * Patient Rendering Logic: Waits for 'idle' (all tiles loaded) + 3s Dwell Time.
+ */
+/** Returns true if the map instance is still usable (not removed). */
+function isMapAlive(map: maplibregl.Map): boolean {
+  try {
+    // getCanvas() throws or returns null after map.remove()
+    return !!map.getCanvas();
+  } catch {
+    return false;
+  }
+}
 
-  // Stop 1: Alps (3D mountains)
-  map.flyTo({
-    center: [7.74, 46.02],
-    zoom: 12,
-    pitch: 60,
-    bearing: 0,
-    duration,
-    essential: true,
-  });
+export async function startCinematicTour(map: maplibregl.Map | null): Promise<void> {
+  if (!map || !isMapAlive(map)) return;
 
-  map.once("moveend", () => {
-    // Stop 2: New York (3D cities)
+  const stops: Array<{ center: [number, number]; zoom: number; pitch: number; bearing: number; name: string }> = [
+    { center: [7.74, 46.02], zoom: 12, pitch: 60, bearing: 0, name: "3D Swiss Alps" },
+    { center: [-74.006, 40.7128], zoom: 15.5, pitch: 55, bearing: -20, name: "New York Urbanism" },
+    { center: [0, 20], zoom: 2.5, pitch: 0, bearing: 0, name: "Global Atmosphere" },
+  ];
+
+  for (const stop of stops) {
+    if (!isMapAlive(map)) return;
+    console.log(`Tour flying to: ${stop.name}`);
+
     map.flyTo({
-      center: [-74.006, 40.7128],
-      zoom: 15.5,
-      pitch: 55,
-      bearing: -20,
-      duration,
+      center: stop.center,
+      zoom: stop.zoom,
+      pitch: stop.pitch,
+      bearing: stop.bearing,
+      duration: 4000,
       essential: true,
     });
 
-    map.once("moveend", () => {
-      // Stop 3: Global view (atmosphere)
-      map.flyTo({
-        center: [0, 20],
-        zoom: 2.5,
-        pitch: 0,
-        bearing: 0,
-        duration,
-        essential: true,
-      });
+    // 1. Wait for movement to finish
+    await new Promise<void>((resolve) => {
+      if (!isMapAlive(map)) { resolve(); return; }
+      map.once("moveend", resolve);
     });
-  });
+
+    // 2. Wait for map to be 'idle' (tiles fully loaded)
+    await new Promise<void>((resolve) => {
+      if (!isMapAlive(map)) { resolve(); return; }
+      map.once("idle", resolve);
+    });
+
+    // 3. Dwell time (3 seconds) to let the viewer enjoy the high-res detail
+    await new Promise<void>((resolve) => setTimeout(resolve, 3000));
+  }
+
+  console.log("Cinematic Tour Complete.");
 }
