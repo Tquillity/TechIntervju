@@ -36,6 +36,13 @@ const NDVI_SOURCE_ID = "nasa-ndvi";
 const NDVI_LAYER_ID = "ndvi-layer";
 const SMAP_SOURCE_ID = "nasa-smap";
 const SMAP_LAYER_ID = "smap-layer";
+const AOD_SOURCE_ID = "nasa-aod";
+const AOD_LAYER_ID = "aod-layer";
+const NO2_SOURCE_ID = "nasa-no2";
+const NO2_LAYER_ID = "no2-layer";
+const NIGHTLIGHTS_SOURCE_ID = "viirs-nightlights";
+const NIGHTLIGHTS_LAYER_ID = "nightlights-layer";
+
 const FIRMS_PROXY_SOURCE_ID = "firms-proxy";
 const FIRMS_PROXY_GLOW_LAYER_ID = "firms-proxy-glow";
 const FIRMS_PROXY_LAYER_ID = "firms-proxy-layer";
@@ -54,6 +61,20 @@ function getNasaNdviTileUrl(time: string): string {
 function getImergPrecipTileUrl(time: string): string {
   return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/IMERG_Precipitation_Rate/default/${time}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`;
 }
+
+/** NASA GIBS: MODIS Combined Value-Added Aerosol Optical Depth (daily). */
+function getNasaAodTileUrl(time: string): string {
+  return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Combined_Value_Added_AOD/default/${time}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`;
+}
+
+/** NASA GIBS: TROPOMI Nitrogen Dioxide Tropospheric Column (Sentinel-5P, daily). */
+function getNasaNo2TileUrl(time: string): string {
+  return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/TROPOMI_L2_Nitrogen_Dioxide_Tropospheric_Column/default/${time}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`;
+}
+
+/** NASA GIBS: VIIRS CityLights 2012 (static, no time dimension, JPEG). */
+const VIIRS_NIGHTLIGHTS_TILE_URL =
+  "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg";
 
 export type BaseLayerId = "vector" | "satellite" | "high-res";
 
@@ -78,6 +99,12 @@ export interface MapViewportProps {
   ndviEnabled?: boolean;
   /** When true, show NASA SMAP soil moisture overlay */
   soilEnabled?: boolean;
+  /** When true, show NASA MODIS Aerosol Optical Depth overlay */
+  aodEnabled?: boolean;
+  /** When true, show TROPOMI Nitrogen Dioxide overlay */
+  no2Enabled?: boolean;
+  /** When true, show VIIRS Night Lights 2012 overlay */
+  nightlightsEnabled?: boolean;
   /** When true, show Active Thermal Anomaly (NASA FIRMS proxy) layer – top-most */
   firesEnabled?: boolean;
   /** GeoJSON points for FIRMS proxy (e.g. USGS Latest Hour); styled as thermal anomalies */
@@ -101,6 +128,9 @@ export function MapViewport({
   openaqEnabled = false,
   ndviEnabled = false,
   soilEnabled = false,
+  aodEnabled = false,
+  no2Enabled = false,
+  nightlightsEnabled = false,
   firesEnabled = false,
   firesData,
   onMapReady,
@@ -363,6 +393,75 @@ export function MapViewport({
         );
       }
 
+      // Aerosol Optical Depth (MODIS Combined) – same stack
+      if (!mapInstance.getSource(AOD_SOURCE_ID)) {
+        mapInstance.addSource(AOD_SOURCE_ID, {
+          type: "raster",
+          tiles: [getNasaAodTileUrl(initialCo2Time)],
+          tileSize: 256,
+          maxzoom: 6,
+          attribution: "NASA GIBS / MODIS Combined AOD",
+        });
+        mapInstance.addLayer(
+          {
+            id: AOD_LAYER_ID,
+            type: "raster",
+            source: AOD_SOURCE_ID,
+            minzoom: 0,
+            maxzoom: 6,
+            layout: { visibility: "none" },
+            paint: { "raster-opacity": 0.7 },
+          },
+          BUILDINGS_3D_LAYER_ID
+        );
+      }
+
+      // Nitrogen Dioxide (TROPOMI Sentinel-5P) – same stack
+      if (!mapInstance.getSource(NO2_SOURCE_ID)) {
+        mapInstance.addSource(NO2_SOURCE_ID, {
+          type: "raster",
+          tiles: [getNasaNo2TileUrl(initialCo2Time)],
+          tileSize: 256,
+          maxzoom: 6,
+          attribution: "NASA GIBS / TROPOMI NO₂ Tropospheric Column",
+        });
+        mapInstance.addLayer(
+          {
+            id: NO2_LAYER_ID,
+            type: "raster",
+            source: NO2_SOURCE_ID,
+            minzoom: 0,
+            maxzoom: 6,
+            layout: { visibility: "none" },
+            paint: { "raster-opacity": 0.7 },
+          },
+          BUILDINGS_3D_LAYER_ID
+        );
+      }
+
+      // VIIRS Night Lights 2012 (static, no time dimension) – below 3D buildings
+      if (!mapInstance.getSource(NIGHTLIGHTS_SOURCE_ID)) {
+        mapInstance.addSource(NIGHTLIGHTS_SOURCE_ID, {
+          type: "raster",
+          tiles: [VIIRS_NIGHTLIGHTS_TILE_URL],
+          tileSize: 256,
+          maxzoom: 8,
+          attribution: "NASA GIBS / VIIRS CityLights 2012",
+        });
+        mapInstance.addLayer(
+          {
+            id: NIGHTLIGHTS_LAYER_ID,
+            type: "raster",
+            source: NIGHTLIGHTS_SOURCE_ID,
+            minzoom: 0,
+            maxzoom: 8,
+            layout: { visibility: "none" },
+            paint: { "raster-opacity": 0.85 },
+          },
+          BUILDINGS_3D_LAYER_ID
+        );
+      }
+
       setLoaded(true);
       onMapReady?.(mapInstance);
     });
@@ -467,6 +566,40 @@ export function MapViewport({
       m.setLayoutProperty(SMAP_LAYER_ID, "visibility", soilEnabled ? "visible" : "none");
     }
   }, [loaded, selectedDate, soilEnabled]);
+
+  // AOD: update tile URL to selected date; toggle visibility
+  useEffect(() => {
+    if (!loaded || !selectedDate || !mapInstanceRef.current) return;
+    const m = mapInstanceRef.current;
+    const source = m.getSource(AOD_SOURCE_ID) as
+      | (maplibregl.RasterTileSource & { setTiles?: (tiles: string[]) => void })
+      | undefined;
+    if (source?.setTiles) source.setTiles([getNasaAodTileUrl(selectedDate)]);
+    if (m.getLayer(AOD_LAYER_ID)) {
+      m.setLayoutProperty(AOD_LAYER_ID, "visibility", aodEnabled ? "visible" : "none");
+    }
+  }, [loaded, selectedDate, aodEnabled]);
+
+  // NO2: update tile URL to selected date; toggle visibility
+  useEffect(() => {
+    if (!loaded || !selectedDate || !mapInstanceRef.current) return;
+    const m = mapInstanceRef.current;
+    const source = m.getSource(NO2_SOURCE_ID) as
+      | (maplibregl.RasterTileSource & { setTiles?: (tiles: string[]) => void })
+      | undefined;
+    if (source?.setTiles) source.setTiles([getNasaNo2TileUrl(selectedDate)]);
+    if (m.getLayer(NO2_LAYER_ID)) {
+      m.setLayoutProperty(NO2_LAYER_ID, "visibility", no2Enabled ? "visible" : "none");
+    }
+  }, [loaded, selectedDate, no2Enabled]);
+
+  // Night Lights: visibility toggle only (static layer, no date dimension)
+  useEffect(() => {
+    if (!loaded || !mapInstanceRef.current) return;
+    const m = mapInstanceRef.current;
+    if (!m.getLayer(NIGHTLIGHTS_LAYER_ID)) return;
+    m.setLayoutProperty(NIGHTLIGHTS_LAYER_ID, "visibility", nightlightsEnabled ? "visible" : "none");
+  }, [loaded, nightlightsEnabled]);
 
   // Cinematic fly-to when bbox is set (e.g. after data load)
   useEffect(() => {

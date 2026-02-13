@@ -31,6 +31,9 @@ export function MapDashboard() {
   const [openaqEnabled, setOpenaqEnabled] = useState(false);
   const [ndviEnabled, setNdviEnabled] = useState(false);
   const [soilEnabled, setSoilEnabled] = useState(false);
+  const [aodEnabled, setAodEnabled] = useState(false);
+  const [no2Enabled, setNo2Enabled] = useState(false);
+  const [nightlightsEnabled, setNightlightsEnabled] = useState(false);
   const [firesEnabled, setFiresEnabled] = useState(false);
   const [firesData, setFiresData] = useState<GeoJSON.FeatureCollection<GeoJSON.Point> | null>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -117,6 +120,9 @@ export function MapDashboard() {
         co2Enabled={co2Enabled}
         ndviEnabled={ndviEnabled}
         soilEnabled={soilEnabled}
+        aodEnabled={aodEnabled}
+        no2Enabled={no2Enabled}
+        nightlightsEnabled={nightlightsEnabled}
         firesEnabled={firesEnabled}
         firesData={firesData ?? null}
         geodata={geodata ?? null}
@@ -163,6 +169,12 @@ export function MapDashboard() {
           onNdviEnabledChange={setNdviEnabled}
           soilEnabled={soilEnabled}
           onSoilEnabledChange={setSoilEnabled}
+          aodEnabled={aodEnabled}
+          onAodEnabledChange={setAodEnabled}
+          no2Enabled={no2Enabled}
+          onNo2EnabledChange={setNo2Enabled}
+          nightlightsEnabled={nightlightsEnabled}
+          onNightlightsEnabledChange={setNightlightsEnabled}
           firesEnabled={firesEnabled}
           onFiresEnabledChange={setFiresEnabled}
           openaqEnabled={openaqEnabled}
@@ -188,6 +200,9 @@ export function MapDashboard() {
           co2Enabled={co2Enabled}
           ndviEnabled={ndviEnabled}
           soilEnabled={soilEnabled}
+          aodEnabled={aodEnabled}
+          no2Enabled={no2Enabled}
+          nightlightsEnabled={nightlightsEnabled}
         />
       </div>
 

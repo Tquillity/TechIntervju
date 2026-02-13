@@ -1,16 +1,19 @@
 "use client";
 
-import { Droplets, Leaf, Cloud } from "lucide-react";
+import { Droplets, Leaf, Cloud, Haze, Factory, Moon } from "lucide-react";
 
 interface MapLegendProps {
   co2Enabled: boolean;
   ndviEnabled: boolean;
   soilEnabled: boolean;
+  aodEnabled: boolean;
+  no2Enabled: boolean;
+  nightlightsEnabled?: boolean;
   className?: string;
 }
 
-export function MapLegend({ co2Enabled, ndviEnabled, soilEnabled, className = "" }: MapLegendProps) {
-  if (!co2Enabled && !ndviEnabled && !soilEnabled) return null;
+export function MapLegend({ co2Enabled, ndviEnabled, soilEnabled, aodEnabled, no2Enabled, nightlightsEnabled = false, className = "" }: MapLegendProps) {
+  if (!co2Enabled && !ndviEnabled && !soilEnabled && !aodEnabled && !no2Enabled && !nightlightsEnabled) return null;
 
   return (
     <div
@@ -60,6 +63,65 @@ export function MapLegend({ co2Enabled, ndviEnabled, soilEnabled, className = ""
             <span>0.1</span>
             <span>10</span>
             <span>50+</span>
+          </div>
+        </div>
+      )}
+
+      {aodEnabled && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-[11px] font-medium text-muted">
+            <Haze className="size-3.5 text-orange-400" /> Aerosol Optical Depth
+          </div>
+          {/* MODIS AOD: transparent (clean) → yellow → orange → dark red (heavy aerosol) */}
+          <div
+            className="h-2 w-full rounded-full border border-white/10"
+            style={{
+              background: "linear-gradient(to right, #fefce8 0%, #facc15 33%, #f97316 66%, #991b1b 100%)",
+            }}
+          />
+          <div className="flex justify-between text-[10px] text-muted tabular-nums px-0.5">
+            <span>0.0</span>
+            <span>0.5</span>
+            <span>1.0+</span>
+          </div>
+        </div>
+      )}
+
+      {no2Enabled && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-[11px] font-medium text-muted">
+            <Factory className="size-3.5 text-violet-400" /> NO&#8322; Tropospheric (mol/cm&#xB2;)
+          </div>
+          {/* TROPOMI NO2: light (low) → yellow → orange → dark red/violet (high pollution) */}
+          <div
+            className="h-2 w-full rounded-full border border-white/10"
+            style={{
+              background: "linear-gradient(to right, #eff6ff 0%, #fde68a 30%, #f97316 60%, #7c3aed 100%)",
+            }}
+          />
+          <div className="flex justify-between text-[10px] text-muted tabular-nums px-0.5">
+            <span>Low</span>
+            <span>Moderate</span>
+            <span>High</span>
+          </div>
+        </div>
+      )}
+
+      {nightlightsEnabled && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-[11px] font-medium text-muted">
+            <Moon className="size-3.5 text-amber-300" /> Night Lights (VIIRS 2012)
+          </div>
+          <div
+            className="h-2 w-full rounded-full border border-white/10"
+            style={{
+              background: "linear-gradient(to right, #0a0a0a 0%, #fbbf24 50%, #ffffff 100%)",
+            }}
+          />
+          <div className="flex justify-between text-[10px] text-muted px-0.5">
+            <span>Dark</span>
+            <span>Urban</span>
+            <span>Bright</span>
           </div>
         </div>
       )}

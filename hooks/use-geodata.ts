@@ -168,12 +168,14 @@ export async function findLatestNasaDate(): Promise<string | null> {
   return null;
 }
 
-export type PresetId = "earthquakes" | "city-trees" | "satellite-anomalies";
+export type PresetId = "earthquakes" | "city-trees" | "satellite-anomalies" | "tectonic-plates" | "world-countries";
 
 const PRESET_URLS: Record<PresetId, string> = {
   earthquakes: "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
   "city-trees": "https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/les-arbres/exports/geojson",
-  "satellite-anomalies": "https://raw.githubusercontent.com/datasets/geo-boundaries-world-110m/master/countries.geojson"
+  "satellite-anomalies": "https://raw.githubusercontent.com/datasets/geo-boundaries-world-110m/master/countries.geojson",
+  "tectonic-plates": "https://raw.githubusercontent.com/fraxen/tectonicplates/master/GeoJSON/PB2002_boundaries.json",
+  "world-countries": "https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_0_countries.geojson",
 };
 
 /** Generate mock GeoJSON so demo works when CORS blocks real URLs */

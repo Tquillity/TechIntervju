@@ -22,6 +22,10 @@ import {
   Leaf,
   Droplets,
   Flame,
+  Haze,
+  Factory,
+  Globe,
+  Moon,
 } from "lucide-react";
 import type { BaseLayerId } from "./map-viewport";
 import type { PresetId } from "@/hooks/use-geodata";
@@ -68,6 +72,12 @@ export interface MapControlsProps {
   onNdviEnabledChange: (enabled: boolean) => void;
   soilEnabled: boolean;
   onSoilEnabledChange: (enabled: boolean) => void;
+  aodEnabled: boolean;
+  onAodEnabledChange: (enabled: boolean) => void;
+  no2Enabled: boolean;
+  onNo2EnabledChange: (enabled: boolean) => void;
+  nightlightsEnabled: boolean;
+  onNightlightsEnabledChange: (enabled: boolean) => void;
   firesEnabled: boolean;
   onFiresEnabledChange: (enabled: boolean) => void;
   openaqEnabled: boolean;
@@ -97,6 +107,12 @@ export function MapControls({
   onNdviEnabledChange,
   soilEnabled,
   onSoilEnabledChange,
+  aodEnabled,
+  onAodEnabledChange,
+  no2Enabled,
+  onNo2EnabledChange,
+  nightlightsEnabled,
+  onNightlightsEnabledChange,
   firesEnabled,
   onFiresEnabledChange,
   openaqEnabled,
@@ -227,6 +243,36 @@ export function MapControls({
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
+                checked={aodEnabled}
+                onChange={(e) => onAodEnabledChange(e.target.checked)}
+                className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
+              />
+              <Haze className="size-4 text-muted" />
+              <span className="text-sm">Aerosol Optical Depth (MODIS)</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={no2Enabled}
+                onChange={(e) => onNo2EnabledChange(e.target.checked)}
+                className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
+              />
+              <Factory className="size-4 text-muted" />
+              <span className="text-sm">Nitrogen Dioxide (TROPOMI)</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={nightlightsEnabled}
+                onChange={(e) => onNightlightsEnabledChange(e.target.checked)}
+                className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
+              />
+              <Moon className="size-4 text-muted" />
+              <span className="text-sm">Night Lights (VIIRS 2012)</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
                 checked={firesEnabled}
                 onChange={(e) => onFiresEnabledChange(e.target.checked)}
                 className="size-4 rounded border-border bg-surface-elevated text-accent focus:ring-accent"
@@ -322,6 +368,32 @@ export function MapControls({
               <Sparkles className="size-4 shrink-0 text-accent" />
             )}
             <span className="text-sm">Recent Satellite Anomalies</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onPresetFetch("tectonic-plates")}
+            disabled={loading}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg bg-surface-elevated hover:bg-border/50 border border-border transition-colors text-left disabled:opacity-60"
+          >
+            {loading ? (
+              <Loader2 className="size-4 shrink-0 animate-spin text-accent" />
+            ) : (
+              <Globe className="size-4 shrink-0 text-danger" />
+            )}
+            <span className="text-sm">Tectonic Plate Boundaries</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onPresetFetch("world-countries")}
+            disabled={loading}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg bg-surface-elevated hover:bg-border/50 border border-border transition-colors text-left disabled:opacity-60"
+          >
+            {loading ? (
+              <Loader2 className="size-4 shrink-0 animate-spin text-accent" />
+            ) : (
+              <Globe className="size-4 shrink-0 text-accent" />
+            )}
+            <span className="text-sm">World Countries</span>
           </button>
         </div>
       </CollapsibleSection>
