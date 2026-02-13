@@ -40,6 +40,7 @@ export function MapDashboard() {
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
   const [presentationMode, setPresentationMode] = useState(false);
   const [customUrl, setCustomUrl] = useState("");
+  const [welcomeBannerVisible, setWelcomeBannerVisible] = useState(true);
   const [inspectedFeature, setInspectedFeature] =
     useState<GeoJSON.Feature | null>(null);
 
@@ -145,6 +146,22 @@ export function MapDashboard() {
         </button>
       )}
 
+      {/* Welcome banner – toggleable from the smiley in the menu */}
+      {welcomeBannerVisible && (
+        <div
+          className={`absolute top-4 left-1/2 -translate-x-1/2 z-30 animate-in fade-in slide-in-from-top-4 duration-500 ${presentationHide}`}
+        >
+          <div className="glass-panel px-16 py-10 text-center border border-accent/30 shadow-[0_0_60px_oklch(0.72_0.18_250/0.3)]">
+            <div className="text-base uppercase tracking-[0.3em] font-medium mb-2 bg-linear-to-r from-[#b8860b] via-[#ffd700] to-[#b8860b] bg-clip-text text-transparent">
+              Välkommen till
+            </div>
+            <div className="text-5xl font-bold tracking-wide bg-linear-to-r from-accent via-white to-accent bg-clip-text text-transparent">
+              Restart.Earth Teknisk Intervju
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mock data banner – hidden in presentation mode */}
       {isMocked && (
         <div
@@ -191,6 +208,8 @@ export function MapDashboard() {
           customUrl={customUrl}
           onCustomUrlChange={setCustomUrl}
           onFetchCustomUrl={handleFetchCustomUrl}
+          welcomeBannerVisible={welcomeBannerVisible}
+          onWelcomeBannerToggle={() => setWelcomeBannerVisible((v) => !v)}
         />
       </div>
 

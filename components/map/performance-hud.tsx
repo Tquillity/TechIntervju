@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import type { Map as MapLibreMap } from "maplibre-gl";
-import { Gauge, ChevronUp, ChevronDown } from "lucide-react";
+import { Gauge, ChevronUp, ChevronDown, Compass } from "lucide-react";
+
+/** Convert bearing (0-360) to a 16-point compass direction. */
+function bearingToCompass(deg: number): string {
+  const dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+  const normalized = ((deg % 360) + 360) % 360;
+  return dirs[Math.round(normalized / 22.5) % 16];
+}
 
 export interface PerformanceHUDProps {
   /** Map instance – when provided, HUD subscribes to this map for live updates */
@@ -20,6 +27,7 @@ export function PerformanceHUD({ map: mapProp, mapRef, mapReady = false, classNa
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [zoom, setZoom] = useState<number | null>(null);
   const [pitch, setPitch] = useState<number | null>(null);
+  const [bearing, setBearing] = useState<number | null>(null);
   const [layerCount, setLayerCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -35,6 +43,7 @@ export function PerformanceHUD({ map: mapProp, mapRef, mapReady = false, classNa
         setCoords({ lng: center.lng, lat: center.lat });
         setZoom(m.getZoom());
         setPitch(m.getPitch());
+        setBearing(m.getBearing());
         const style = m.getStyle();
         const layers = Array.isArray(style?.layers) ? style.layers : [];
         setLayerCount(layers.length);
@@ -95,9 +104,17 @@ export function PerformanceHUD({ map: mapProp, mapRef, mapReady = false, classNa
               Zoom Level:{" "}
               {zoom != null ? <span className="text-foreground tabular-nums">{zoom.toFixed(2)}</span> : "—"}
             </div>
-            <div>
-              Pitch:{" "}
-              {pitch != null ? <span className="text-foreground tabular-nums">{pitch.toFixed(1)}°</span> : "—"}
+            <div className="flex items-center gap-3">
+              <span>
+                Pitch:{" "}
+                {pitch != null ? <span className="text-foreground tabular-nums">{pitch.toFixed(1)}°</span> : "—"}
+              </span>
+              <span className="flex items-center gap-1">
+                <Compass className="size-3" />
+                {bearing != null ? (
+                  <span className="text-foreground tabular-nums">{bearingToCompass(bearing)} {bearing.toFixed(0)}°</span>
+                ) : "—"}
+              </span>
             </div>
             <div>
               Layer Count:{" "}

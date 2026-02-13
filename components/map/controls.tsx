@@ -26,6 +26,7 @@ import {
   Factory,
   Globe,
   Moon,
+  Smile,
 } from "lucide-react";
 import type { BaseLayerId } from "./map-viewport";
 import type { PresetId } from "@/hooks/use-geodata";
@@ -94,6 +95,8 @@ export interface MapControlsProps {
   customUrl: string;
   onCustomUrlChange: (url: string) => void;
   onFetchCustomUrl: () => void;
+  welcomeBannerVisible: boolean;
+  onWelcomeBannerToggle: () => void;
 }
 
 export function MapControls({
@@ -129,6 +132,8 @@ export function MapControls({
   customUrl,
   onCustomUrlChange,
   onFetchCustomUrl,
+  welcomeBannerVisible,
+  onWelcomeBannerToggle,
 }: MapControlsProps) {
   const [baseLayerOpen, setBaseLayerOpen] = useState(true);
   const [layersAndPresentationOpen, setLayersAndPresentationOpen] = useState(true);
@@ -139,7 +144,16 @@ export function MapControls({
     <div className="glass-panel p-4 space-y-4 w-72 max-h-[calc(100vh-5rem)] overflow-y-auto custom-scrollbar flex flex-col">
       <div className="flex items-center gap-2 text-accent font-semibold shrink-0">
         <Layers className="size-5" />
-        <span>Magic Import</span>
+        <span className="flex-1">Magic Import</span>
+        <button
+          type="button"
+          onClick={onWelcomeBannerToggle}
+          className={`p-1 rounded-md transition-colors ${welcomeBannerVisible ? "bg-accent/20 text-accent" : "text-muted hover:text-accent"}`}
+          title={welcomeBannerVisible ? "Hide welcome banner" : "Show welcome banner"}
+          aria-pressed={welcomeBannerVisible}
+        >
+          <Smile className="size-5" />
+        </button>
       </div>
 
       {/* Base layer – collapsible */}
