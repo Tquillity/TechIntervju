@@ -6,6 +6,8 @@ import { PanelLeftOpen } from "lucide-react";
 import { MapViewport, startCinematicTour, type BaseLayerId } from "./map-viewport";
 import { MapControls } from "./controls";
 import { DataInspector } from "./data-inspector";
+import { DataListing } from "./data-listing";
+import { MapLegend } from "./map-legend";
 import { TimelineSlider } from "./timeline-slider";
 import { PerformanceHUD } from "./performance-hud";
 import { useGeoData, findLatestNasaDate } from "@/hooks/use-geodata";
@@ -180,22 +182,49 @@ export function MapDashboard() {
         />
       </div>
 
-      {/* Temporal CO2 timeline – hidden in presentation mode */}
+      {/* Scientific legends: right of menu so they never sit on top of it */}
+      <div className={`absolute bottom-12 left-78 z-10 ${presentationHide}`}>
+        <MapLegend
+          co2Enabled={co2Enabled}
+          ndviEnabled={ndviEnabled}
+          soilEnabled={soilEnabled}
+        />
+      </div>
+
+      {/* Temporal atmosphere timeline – hidden in presentation mode */}
       <div className={`absolute bottom-8 left-1/2 -translate-x-1/2 z-10 w-full max-w-md px-4 ${presentationHide}`}>
         <TimelineSlider value={selectedDate} onChange={setSelectedDate} maxDate={maxAvailableDate} />
       </div>
 
-      {/* Data Inspector – hidden in presentation mode */}
-      <div className={`absolute top-4 right-16 z-10 max-w-[calc(100vw-8rem)] ${presentationHide}`}>
+      {/* Bottom-right: Inspector above list so it never overlaps Data Records */}
+      <div className={`absolute bottom-10 right-4 z-20 flex flex-col items-end gap-3 ${presentationHide}`}>
         <DataInspector
           feature={inspectedFeature}
           onClose={() => setInspectedFeature(null)}
         />
-      </div>
-
-      {/* Performance HUD – bottom-right, toggleable */}
-      <div className={presentationHide}>
-        <PerformanceHUD map={mapInstance} mapRef={mapRef} mapReady={mapReady} />
+        <DataListing
+          data={geodata ?? null}
+          onFeatureClick={(f) => {
+            setInspectedFeature(f);
+            if (f.geometry?.type === "Point" && mapRef.current) {
+              const coords = (f.geometry as GeoJSON.Point).coordinates;
+              if (Array.isArray(coords) && coords.length >= 2) {
+                mapRef.current.flyTo({
+                  center: [coords[0], coords[1]],
+                  zoom: 12,
+                  pitch: 45,
+                  essential: true,
+                });
+              }
+            }
+          }}
+        />
+        <PerformanceHUD
+          map={mapInstance}
+          mapRef={mapRef}
+          mapReady={mapReady}
+          className="static"
+        />
       </div>
     </div>
   );

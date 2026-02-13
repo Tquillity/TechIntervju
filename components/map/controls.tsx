@@ -120,8 +120,8 @@ export function MapControls({
   const [customUrlOpen, setCustomUrlOpen] = useState(true);
 
   return (
-    <div className="glass-panel p-4 space-y-4 w-72">
-      <div className="flex items-center gap-2 text-accent font-semibold">
+    <div className="glass-panel p-4 space-y-4 w-72 max-h-[calc(100vh-5rem)] overflow-y-auto custom-scrollbar flex flex-col">
+      <div className="flex items-center gap-2 text-accent font-semibold shrink-0">
         <Layers className="size-5" />
         <span>Magic Import</span>
       </div>

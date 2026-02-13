@@ -44,6 +44,22 @@
   border-radius: var(--radius-panel);
 }
 
+/* Scrollbar for data listing / panels */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
 /* MapLibre overrides – ensure canvas fills container */
 .maplibregl-canvas-container {
   position: absolute;

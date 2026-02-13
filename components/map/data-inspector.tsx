@@ -2,6 +2,24 @@
 
 import { X, Info, Calendar, Database } from "lucide-react";
 
+/** Format value for display; show Unix ms timestamps as readable date/time. */
+function formatPropertyValue(key: string, value: unknown): string {
+  if (value === null || value === undefined) return String(value);
+  const keyLower = key.toLowerCase();
+  const isTimestampKey = keyLower === "time" || keyLower === "updated" || keyLower === "updated_time";
+  if (isTimestampKey) {
+    const n = typeof value === "number" ? value : Number(value);
+    if (Number.isFinite(n) && n > 1e12 && n < 2e13) {
+      return new Date(n).toLocaleString(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+    }
+  }
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
 interface DataInspectorProps {
   feature: GeoJSON.Feature | null;
   onClose: () => void;
@@ -20,7 +38,7 @@ export function DataInspector({ feature, onClose }: DataInspectorProps) {
   const props = feature.properties || {};
 
   return (
-    <div className="glass-panel w-80 max-h-[70vh] flex flex-col overflow-hidden animate-in fade-in slide-in-from-right-4">
+    <div className="glass-panel w-80 max-h-[70vh] flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-2">
       <div className="p-4 border-b border-border flex items-center justify-between bg-white/5">
         <div className="flex items-center gap-2 font-semibold text-accent">
           <Database className="size-4" />
@@ -36,16 +54,14 @@ export function DataInspector({ feature, onClose }: DataInspectorProps) {
         </button>
       </div>
 
-      <div className="p-4 overflow-y-auto space-y-3">
+      <div className="p-4 overflow-y-auto custom-scrollbar space-y-3">
         {Object.entries(props).map(([key, value]) => (
           <div key={key} className="space-y-1">
             <span className="text-[10px] uppercase tracking-wider text-muted font-bold">
               {key}
             </span>
             <div className="text-sm bg-black/20 p-2 rounded border border-white/5 wrap-break-word">
-              {typeof value === "object"
-                ? JSON.stringify(value)
-                : String(value)}
+              {formatPropertyValue(key, value)}
             </div>
           </div>
         ))}
