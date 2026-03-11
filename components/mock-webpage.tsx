@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { Globe, Layers, BarChart3, Zap, Shield, Code } from "lucide-react";
+import { SiteNav, SiteFooter } from "@/components/site-nav";
 
 interface MockWebpageProps {
   children: React.ReactNode;
@@ -10,32 +10,7 @@ interface MockWebpageProps {
 export function MockWebpage({ children }: MockWebpageProps) {
   return (
     <div className="min-h-screen bg-surface text-white">
-      {/* Nav bar */}
-      <nav className="sticky top-0 z-50 border-b border-border bg-surface/90 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Globe className="size-7 text-accent" />
-            <span className="text-lg font-bold tracking-tight">
-              Restart<span className="text-accent">.Earth</span>
-              <span className="text-xs font-normal text-muted ml-2">Teknisk Intervju</span>
-            </span>
-          </div>
-          <div className="hidden sm:flex items-center gap-8 text-sm text-muted">
-            <Link href="/platform" className="hover:text-white transition-colors">Platform</Link>
-            <Link href="/data-sources" className="hover:text-white transition-colors">Data Sources</Link>
-            <Link href="/api-docs" className="hover:text-white transition-colors">API</Link>
-            <Link href="/about" className="hover:text-white transition-colors">About</Link>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/about"
-              className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-muted text-white text-sm font-medium transition-colors"
-            >
-              Request Demo
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <SiteNav />
 
       {/* Hero */}
       <section className="mx-auto max-w-7xl px-6 pt-16 pb-10 text-center">
@@ -103,20 +78,7 @@ export function MockWebpage({ children }: MockWebpageProps) {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border py-10 text-center text-sm text-muted">
-        <div className="mx-auto max-w-7xl px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Globe className="size-4 text-accent" />
-            <span>Restart.Earth Teknisk Intervju</span>
-            <span className="text-border">|</span>
-            <span>2026</span>
-          </div>
-          <div className="text-xs text-muted/60">
-            Built with Next.js 16, MapLibre GL JS v5, Tailwind CSS 4, and NASA GIBS
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
